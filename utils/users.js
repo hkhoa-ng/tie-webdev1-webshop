@@ -142,7 +142,7 @@ const saveNewUser = user => {
  * @throws {Error} error object with message "Unknown role"
  */
 const updateUserRole = (userId, role) => {
-  // TODO: 8.3 Update user's role
+  // TODO: 8.4> Update user's role
   throw new Error('Not Implemented');
 };
 
