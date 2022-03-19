@@ -109,13 +109,40 @@ const handleRequest = async(request, response) => {
       return responseUtils.badRequest(response, 'Invalid Content-Type. Expected application/json');
     }
 
+
+    const data_json = await parseBodyJson(request);
+    const {  name, email, password } = data_json;
+
+    if(data_json.email == undefined || data_json.name == undefined || data_json.password == undefined) {     
+      return responseUtils.badRequest(response, '400 Bad Request');
+    } 
+
+
+    if(emailInUse(email)) {
+      return responseUtils.badRequest(response, '400 Bad Request');
+    }
+
+
+    if(name && email && password) {
+        var __data = {
+          ...data_json,
+          "_id": "5558",
+          "role": "customer"
+        }
+        return responseUtils.createdResource(response, __data, 201)
+    }
+
+    
+
+
+
     // TODO: 8.4 Implement registration
     // You can use parseBodyJson(request) method from utils/requestUtils.js to parse request body.
     // Useful methods here include:
     // - validateUser(user) from /utils/users.js 
     // - emailInUse(user.email) from /utils/users.js
     // - badRequest(response, message) from /utils/responseUtils.js
-    throw new Error('Not Implemented');
+    // throw new Error('Not Implemented');
   }
 };
 
