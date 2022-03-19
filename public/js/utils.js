@@ -134,3 +134,9 @@ const removeElement = (containerId, elementId) => {
   const container = document.getElementById(containerId);
   container.querySelectorAll(`#${elementId}`).forEach(element => element.remove());
 };
+
+
+module.exports = {
+  createNotification,
+  postOrPutJSON
+};

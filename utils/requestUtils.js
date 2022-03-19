@@ -42,7 +42,6 @@ const isJson = request => {
     return false;
   }
   // TODO: 8.4 Check whether request "Content-Type" is JSON or not // Done
-  throw new Error('Not Implemented');
 };
 
 /**
