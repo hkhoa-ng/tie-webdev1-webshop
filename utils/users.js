@@ -82,11 +82,7 @@ const getUser = (email, password) => {
  * @param {string} userId
  * @returns {Object|undefined}
  */
-<<<<<<< HEAD
- const getUserById = (userId) => {
-=======
 const getUserById = (userId) => {
->>>>>>> 2124958493bc94dc1b8dc01d1fff728c0e4c9825
   // TODO: 8.4 Find user by user id
   var user = data.users.find((ob) => {
     return ob._id == userId;
