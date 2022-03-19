@@ -102,10 +102,6 @@ const getUserById = (userId) => {
  * @param {string} userId
  * @returns {Object|undefined} deleted user or undefined if user does not exist
  */
-<<<<<<< HEAD
-
-=======
->>>>>>> 2124958493bc94dc1b8dc01d1fff728c0e4c9825
 const deleteUserById = (userId) => {
   // TODO: 8.4 Delete user with a given id
   // Hint: Array's findIndex() with user ID can could be used to find the user, and Array's splice() method can be used to "extract" the user object.
