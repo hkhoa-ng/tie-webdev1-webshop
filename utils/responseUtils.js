@@ -1,13 +1,14 @@
-const basicAuthChallenge = response => {
-  // TODO: 8.5 Send proper basic authentication challenge headers. 
+const basicAuthChallenge = (response) => {
+  // DONE: 8.5 Send proper basic authentication challenge headers.
   // See:
   // https://developer.mozilla.org/en-US/docs/Web/HTTP/Authentication#the_general_http_authentication_framework
-  // The first step of the challenge and response flow  as described on the webpage is done here. 
-  throw new Error('Not Implemented');
+  // The first step of the challenge and response flow  as described on the webpage is done here.
+  response.writeHead(401, { "WWW-Authenticate": "Basic" });
+  return response.end();
 };
 
 const sendJson = (response, payload, code = 200) => {
-  response.writeHead(code, { 'Content-Type': 'application/json' });
+  response.writeHead(code, { "Content-Type": "application/json" });
   return response.end(JSON.stringify(payload));
 };
 
@@ -15,7 +16,7 @@ const createdResource = (response, payload) => {
   return sendJson(response, payload, 201);
 };
 
-const noContent = response => {
+const noContent = (response) => {
   response.statusCode = 204;
   return response.end();
 };
@@ -27,32 +28,32 @@ const badRequest = (response, errorMsg) => {
   return response.end();
 };
 
-const unauthorized = response => {
+const unauthorized = (response) => {
   response.statusCode = 401;
   return response.end();
 };
 
-const forbidden = response => {
+const forbidden = (response) => {
   response.statusCode = 403;
   return response.end();
 };
 
-const notFound = response => {
+const notFound = (response) => {
   response.statusCode = 404;
   return response.end();
 };
 
-const methodNotAllowed = response => {
+const methodNotAllowed = (response) => {
   response.statusCode = 405;
   return response.end();
 };
 
-const contentTypeNotAcceptable = response => {
+const contentTypeNotAcceptable = (response) => {
   response.statusCode = 406;
   return response.end();
 };
 
-const internalServerError = response => {
+const internalServerError = (response) => {
   response.statusCode = 500;
   return response.end();
 };
@@ -74,5 +75,5 @@ module.exports = {
   contentTypeNotAcceptable,
   internalServerError,
   basicAuthChallenge,
-  redirectToPage
+  redirectToPage,
 };

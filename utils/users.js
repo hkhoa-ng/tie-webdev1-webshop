@@ -70,7 +70,7 @@ const getUser = (email, password) => {
   const user = data.users.find(
     (user) => user.email === email && user.password === password
   );
-  return user && { ...user };
+  return user ? { ...user } : undefined;
 };
 
 /**
@@ -83,18 +83,12 @@ const getUser = (email, password) => {
  * @returns {Object|undefined}
  */
 const getUserById = (userId) => {
-  // TODO: 8.4 Find user by user id
+  // DONE: 8.4 Find user by user id
   var user = data.users.find((ob) => {
     return ob._id == userId;
   });
-  if (user) {
-    return user && { ...user };
-  } else {
-    return undefined;
-  }
+  return user ? { ...user } : undefined;
 };
-
-
 
 /**
  * Delete user by its ID and return the deleted user
@@ -103,7 +97,7 @@ const getUserById = (userId) => {
  * @returns {Object|undefined} deleted user or undefined if user does not exist
  */
 const deleteUserById = (userId) => {
-  // TODO: 8.4 Delete user with a given id
+  // DONE: 8.4 Delete user with a given id
   // Hint: Array's findIndex() with user ID can could be used to find the user, and Array's splice() method can be used to "extract" the user object.
   let array = data.users;
   let index = array.findIndex((obj) => {
@@ -162,7 +156,7 @@ const saveNewUser = (user) => {
  * @throws {Error} error object with message "Unknown role"
  */
 const updateUserRole = (userId, role) => {
-  // TODO: 8.4 Update user's role
+  // DONE: 8.4 Update user's role
   // throw new Error('Not Implemented');
   if (data.roles.includes(role)) {
     let array = data.users;
@@ -180,8 +174,6 @@ const updateUserRole = (userId, role) => {
     throw new Error("Unknown role");
   }
 };
-
-
 
 /**
  * Validate user object (Very simple and minimal validation)

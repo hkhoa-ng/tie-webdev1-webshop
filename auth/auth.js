@@ -1,16 +1,32 @@
+const { createNotification } = require("../public/js/utils");
+const {
+  acceptsJson,
+  getCredentials,
+  isJson,
+  parseBodyJson,
+} = require("../utils/requestUtils");
+const {
+  deleteUserById,
+  emailInUse,
+  getAllUsers,
+  getUser,
+  getUserById,
+  resetUsers,
+  saveNewUser,
+  updateUserRole,
+  validateUser,
+} = require("../utils/users.js");
 /**
  * Get current user based on the request headers
  *
  * @param {http.IncomingMessage} request
  * @returns {Object|null} current authenticated user or null if not yet authenticated
  */
-const getCurrentUser = async request => {
-  // TODO: 8.5 Implement getting current user based on the "Authorization" request header
-
-  // NOTE: You can import two methods which can be useful here: // - getCredentials(request) function from utils/requestUtils.js
-  // - getUser(email, password) function from utils/users.js to get the currently logged in user
-
-  throw new Error('Not Implemented');
+const getCurrentUser = async (request) => {
+  // DONE: 8.5 Implement getting current user based on the "Authorization" request header
+  let credentials = getCredentials(request);
+  let currentUser = getUser(credentials[0], credentials[1]);
+  return currentUser;
 };
 
 module.exports = { getCurrentUser };

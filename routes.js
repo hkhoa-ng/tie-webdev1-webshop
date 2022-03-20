@@ -1,5 +1,12 @@
 const responseUtils = require("./utils/responseUtils");
-const { acceptsJson, isJson, parseBodyJson } = require("./utils/requestUtils");
+// const requestUtils = require("./utils/requestUtils");
+const authUtils = require("./auth/auth.js");
+const {
+  getCredentials,
+  acceptsJson,
+  isJson,
+  parseBodyJson,
+} = require("./utils/requestUtils");
 const { renderPublic } = require("./utils/render");
 const {
   emailInUse,
@@ -105,7 +112,34 @@ const handleRequest = async (request, response) => {
 
   // GET all users
   if (filePath === "/api/users" && method.toUpperCase() === "GET") {
-    // TODO: 8.5 Add authentication (only allowed to users with role "admin")
+    // DONE: 8.5 Add authentication (only allowed to users with role "admin")
+    let authorizationHeader = request.headers["authorization"];
+    if (!authorizationHeader) {
+      // response with basic auth challenge if auth header is missing/empty
+      return responseUtils.basicAuthChallenge(response);
+    }
+
+    // check if the header is properly encoded
+    let credentials = authorizationHeader.split(" ")[1];
+    const base64regex =
+      /^([0-9a-zA-Z+/]{4})*(([0-9a-zA-Z+/]{2}==)|([0-9a-zA-Z+/]{3}=))?$/;
+    if (!base64regex.test(credentials)) {
+      // response with basic auth challenge if auth header is not properly encoded
+      return responseUtils.basicAuthChallenge(response);
+    }
+
+    // If all is good, attempt to get the current user
+    let currentUser = await authUtils
+      .getCurrentUser(request)
+      .then((user) => user);
+    if (currentUser === undefined) {
+      // response with basic auth challenge if credentials are incorrect (no user found)
+      return responseUtils.basicAuthChallenge(response);
+    }
+    // response with basic auth challenge if customer credentials are parsed
+    if (currentUser.role === "customer") {
+      return responseUtils.forbidden(response);
+    }
     return responseUtils.sendJson(response, getAllUsers());
   }
 
@@ -149,7 +183,6 @@ const handleRequest = async (request, response) => {
     // - emailInUse(user.email) from /utils/users.js
     // - badRequest(response, message) from /utils/responseUtils.js
     // throw new Error('Not Implemented');
-    
   }
 };
 

@@ -18,9 +18,12 @@
  * @param {string} url resource url on the server
  * @returns {Promise<*>} promise that resolves to the parsed JSON
  */
-const getJSON = async url => {
-  const response = await fetch(url, { method: 'GET', headers: { Accept: 'application/json' } });
-  if (!response.ok) throw new Error('Network response was not OK');
+const getJSON = async (url) => {
+  const response = await fetch(url, {
+    method: "GET",
+    headers: { Accept: "application/json" },
+  });
+  if (!response.ok) throw new Error("Network response was not OK");
   return await response.json();
 };
 
@@ -35,23 +38,23 @@ const getJSON = async url => {
  * @param {Object|Array} data payload data to be sent to the server as JSON
  * @returns {Promise<*>} promise that resolves to the parsed JSON
  */
-const postOrPutJSON = async(url, method, data = {}) => {
+const postOrPutJSON = async (url, method, data = {}) => {
   method = method.toUpperCase();
-  if (method !== 'POST' && method !== 'PUT') {
-    throw 'Invalid method! Valid methods are POST and PUT!';
+  if (method !== "POST" && method !== "PUT") {
+    throw "Invalid method! Valid methods are POST and PUT!";
   }
 
   const response = await fetch(url, {
     method,
-    credentials: 'same-origin',
+    credentials: "same-origin",
     headers: {
-      Accept: 'application/json',
-      'Content-Type': 'application/json'
+      Accept: "application/json",
+      "Content-Type": "application/json",
     },
-    body: JSON.stringify(data)
+    body: JSON.stringify(data),
   });
 
-  if (!response.ok) throw new Error('Network response was not OK');
+  if (!response.ok) throw new Error("Network response was not OK");
   if (response.status < 200 || response.status > 400) {
     throw new Error(`Received "${response.status} ${response.statusText}"`);
   }
@@ -68,9 +71,9 @@ const postOrPutJSON = async(url, method, data = {}) => {
  * @param {string} url resource url on the server
  * @returns {Promise<*>} promise that resolves to the parsed JSON
  */
-const deleteResource = async url => {
+const deleteResource = async (url) => {
   // TODO: 8.6 Implement this
-  throw new Error('Not Implemented');
+  throw new Error("Not Implemented");
 };
 
 /**
@@ -83,12 +86,7 @@ const deleteResource = async url => {
 const generateId = () => {
   // Shamelessly borrowed from a Gist. See:
   // https://gist.github.com/gordonbrander/2230317
-  return (
-    '_' +
-    Math.random()
-    .toString(36)
-    .substr(2, 9)
-  );
+  return "_" + Math.random().toString(36).substr(2, 9);
 };
 
 /**
@@ -105,14 +103,16 @@ const createNotification = (message, containerId, isSuccess = true) => {
   const container = document.getElementById(containerId);
 
   // Create new p element to hold text
-  const newParagraph = document.createElement('p');
+  const newParagraph = document.createElement("p");
 
   // Create unique id for the notification so that it can easily be removed after timeout
   const notificationId = generateId();
   newParagraph.id = notificationId;
 
   // Set CSS class for the paragraph based on the isSuccess variable
-  newParagraph.classList.add(isSuccess ? 'background-lightgreen' : 'background-red');
+  newParagraph.classList.add(
+    isSuccess ? "background-lightgreen" : "background-red"
+  );
 
   // Add message test inside the paragraph and append the paragraph to the container
   newParagraph.append(document.createTextNode(message));
@@ -132,11 +132,12 @@ const createNotification = (message, containerId, isSuccess = true) => {
  */
 const removeElement = (containerId, elementId) => {
   const container = document.getElementById(containerId);
-  container.querySelectorAll(`#${elementId}`).forEach(element => element.remove());
+  container
+    .querySelectorAll(`#${elementId}`)
+    .forEach((element) => element.remove());
 };
-
 
 module.exports = {
   createNotification,
-  postOrPutJSON
+  postOrPutJSON,
 };
