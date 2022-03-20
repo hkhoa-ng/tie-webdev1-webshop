@@ -119,7 +119,7 @@ const deleteUserById = (userId) => {
  *
  * @returns {Array<Object>} all users
  */
-const getAllUsers = () => data.users.map((user) => ({ ...user }));
+const getAllUsers = () => data.users.map((user) => ({ ...user }) );
 
 /**
  * Save new user
