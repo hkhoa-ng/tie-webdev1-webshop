@@ -1,3 +1,6 @@
+/* eslint-disable quotes */
+/* eslint-disable complexity */
+/* eslint-disable max-lines-per-function */
 const responseUtils = require("./utils/responseUtils");
 // const requestUtils = require("./utils/requestUtils");
 const authUtils = require("./auth/auth.js");
@@ -13,6 +16,9 @@ const {
   getAllUsers,
   saveNewUser,
   validateUser,
+  getUserById,
+  updateUserRole,
+  deleteUserById,
 } = require("./utils/users");
 
 /**
@@ -90,7 +96,56 @@ const handleRequest = async (request, response) => {
     // - getUserById(userId) from /utils/users.js
     // - notFound(response) from  /utils/responseUtils.js
     // - sendJson(response,  payload)  from  /utils/responseUtils.js can be used to send the requested data in JSON format
-    throw new Error("Not Implemented");
+    const authorizationHeader = headers["authorization"];
+    if (!authorizationHeader) {
+      // response with basic auth challenge if auth header is missing/empty
+      return responseUtils.basicAuthChallenge(response);
+    }
+
+    if (method.toUpperCase() === "OPTIONS") {
+      return sendOptions(filePath, response);
+    }
+    const currentUser = await authUtils
+      .getCurrentUser(request)
+      .then((user) => user);
+    if (currentUser === undefined) {
+      // response with basic auth challenge if credentials are incorrect
+      return responseUtils.basicAuthChallenge(response);
+    }
+    const uid = filePath.split("/")[3];
+    if (getUserById(uid) === undefined) {
+      return responseUtils.notFound(response);
+    }
+    // response with basic auth challenge if customer credentials are parse
+    if (currentUser.role === "customer") {
+      return responseUtils.forbidden(response);
+    }
+    if (method.toUpperCase() === "GET" && currentUser.role === "admin") {
+      return responseUtils.sendJson(response, currentUser);
+    }
+    if (method.toUpperCase() === "DELETE" && currentUser.role === "admin") {
+      const userToBeDeleted = getUserById(uid);
+      deleteUserById(uid);
+      return responseUtils.sendJson(response, userToBeDeleted);
+    }
+    const userChangeRole = await parseBodyJson(request);
+    // console.log(userChangeRole);
+    // console.log(currentUser);
+    // console.log(getUserById(uid));
+    if (method.toUpperCase() === "PUT") {
+      const roleToChange = userChangeRole.role;
+      if (
+        (roleToChange !== "admin" && roleToChange !== "customer") ||
+        !roleToChange
+      ) {
+        return responseUtils.badRequest(response);
+      }
+
+      if (currentUser.role === "admin") {
+        updateUserRole(uid, userChangeRole.role);
+        return responseUtils.sendJson(response, getUserById(uid));
+      }
+    }
   }
 
   // Default to 404 Not Found if unknown url
@@ -113,14 +168,14 @@ const handleRequest = async (request, response) => {
   // GET all users
   if (filePath === "/api/users" && method.toUpperCase() === "GET") {
     // DONE: 8.5 Add authentication (only allowed to users with role "admin")
-    let authorizationHeader = request.headers["authorization"];
+    const authorizationHeader = headers["authorization"];
     if (!authorizationHeader) {
       // response with basic auth challenge if auth header is missing/empty
       return responseUtils.basicAuthChallenge(response);
     }
 
     // check if the header is properly encoded
-    let credentials = authorizationHeader.split(" ")[1];
+    const credentials = authorizationHeader.split(" ")[1];
     const base64regex =
       /^([0-9a-zA-Z+/]{4})*(([0-9a-zA-Z+/]{2}==)|([0-9a-zA-Z+/]{3}=))?$/;
     if (!base64regex.test(credentials)) {
@@ -129,7 +184,7 @@ const handleRequest = async (request, response) => {
     }
 
     // If all is good, attempt to get the current user
-    let currentUser = await authUtils
+    const currentUser = await authUtils
       .getCurrentUser(request)
       .then((user) => user);
     if (currentUser === undefined) {
@@ -153,13 +208,13 @@ const handleRequest = async (request, response) => {
       );
     }
 
-    const data_json = await parseBodyJson(request);
-    const { name, email, password } = data_json;
+    const dataJson = await parseBodyJson(request);
+    const { name, email, password } = dataJson;
 
     if (
-      data_json.email == undefined ||
-      data_json.name == undefined ||
-      data_json.password == undefined
+      dataJson.email === undefined ||
+      dataJson.name === undefined ||
+      dataJson.password === undefined
     ) {
       return responseUtils.badRequest(response, "400 Bad Request");
     }
@@ -169,8 +224,8 @@ const handleRequest = async (request, response) => {
     }
 
     if (name && email && password) {
-      var __data = {
-        ...data_json,
+      const __data = {
+        ...dataJson,
         _id: "5558",
         role: "customer",
       };

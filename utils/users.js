@@ -68,7 +68,8 @@ const emailInUse = (email) => data.users.some((user) => user.email === email);
  */
 const getUser = (email, password) => {
   const user = data.users.find(
-    (user) => user.email === email && user.password === password
+    (currentUser) =>
+      currentUser.email === email && currentUser.password === password
   );
   return user ? { ...user } : undefined;
 };
@@ -84,8 +85,8 @@ const getUser = (email, password) => {
  */
 const getUserById = (userId) => {
   // DONE: 8.4 Find user by user id
-  var user = data.users.find((ob) => {
-    return ob._id == userId;
+  const user = data.users.find((ob) => {
+    return ob._id === userId;
   });
   return user ? { ...user } : undefined;
 };
@@ -99,12 +100,12 @@ const getUserById = (userId) => {
 const deleteUserById = (userId) => {
   // DONE: 8.4 Delete user with a given id
   // Hint: Array's findIndex() with user ID can could be used to find the user, and Array's splice() method can be used to "extract" the user object.
-  let array = data.users;
-  let index = array.findIndex((obj) => {
+  const array = data.users;
+  const index = array.findIndex((obj) => {
     return obj._id === userId;
   });
   if (index !== -1) {
-    let deleted = array.splice(index, 1);
+    const deleted = array.splice(index, 1);
     return deleted[0];
   } else {
     return undefined;
@@ -159,13 +160,13 @@ const updateUserRole = (userId, role) => {
   // DONE: 8.4 Update user's role
   // throw new Error('Not Implemented');
   if (data.roles.includes(role)) {
-    let array = data.users;
-    let index = array.findIndex((obj) => {
+    const array = data.users;
+    const index = array.findIndex((obj) => {
       return obj._id === userId;
     });
     if (index !== -1) {
       array[index].role = role;
-      let updatedUser = array[index];
+      const updatedUser = array[index];
       return { ...updatedUser };
     } else {
       return undefined;

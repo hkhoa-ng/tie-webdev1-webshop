@@ -24,8 +24,8 @@ const {
  */
 const getCurrentUser = async (request) => {
   // DONE: 8.5 Implement getting current user based on the "Authorization" request header
-  let credentials = getCredentials(request);
-  let currentUser = getUser(credentials[0], credentials[1]);
+  const credentials = getCredentials(request);
+  const currentUser = await getUser(credentials[0], credentials[1]);
   return currentUser;
 };
 
