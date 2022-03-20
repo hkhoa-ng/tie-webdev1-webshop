@@ -87,6 +87,11 @@ const handleRequest = async (request, response) => {
   }
 
   if (matchUserId(filePath)) {
+    if (!request.headers.authorization) {
+      response.setHeader("WWW-Authenticate", "Basic");
+      return responseUtils.unauthorized(response);
+    }
+
     // TODO: 8.6 Implement view, update and delete a single user by ID (GET, PUT, DELETE)
     // You can use parseBodyJson(request) from utils/requestUtils.js to parse request body
     // If the HTTP method of a request is OPTIONS you can use sendOptions(filePath, response) function from this module
@@ -96,6 +101,7 @@ const handleRequest = async (request, response) => {
     // - getUserById(userId) from /utils/users.js
     // - notFound(response) from  /utils/responseUtils.js
     // - sendJson(response,  payload)  from  /utils/responseUtils.js can be used to send the requested data in JSON format
+
     const authorizationHeader = headers["authorization"];
     if (!authorizationHeader) {
       // response with basic auth challenge if auth header is missing/empty
