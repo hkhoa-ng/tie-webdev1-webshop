@@ -157,6 +157,7 @@ const saveNewUser = (user) => {
  * @throws {Error} error object with message "Unknown role"
  */
 const updateUserRole = (userId, role) => {
+<<<<<<< HEAD
   // DONE: 8.4 Update user's role
   // throw new Error('Not Implemented');
   if (data.roles.includes(role)) {
@@ -174,6 +175,10 @@ const updateUserRole = (userId, role) => {
   } else {
     throw new Error("Unknown role");
   }
+=======
+  // TODO: 8.4> Update user's role
+  throw new Error('Not Implemented');
+>>>>>>> 1b5025c8714c788a2634107f719619a4262880ea
 };
 
 /**
