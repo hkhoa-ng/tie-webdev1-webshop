@@ -15,6 +15,8 @@
     const id = form.querySelector('#id-input').value;
     const role = form.querySelector('#role-input').value;
 
+    console.log(form, '________form');
+
     try {
       const user = await postOrPutJSON(`/api/users/${id}`, 'PUT', { role });
       document.querySelector(`#role-${id}`).textContent = user.role;
