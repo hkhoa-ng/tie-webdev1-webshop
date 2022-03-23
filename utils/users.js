@@ -158,7 +158,6 @@ const saveNewUser = (user) => {
  */
 const updateUserRole = (userId, role) => {
   // DONE: 8.4 Update user's role
-  // throw new Error('Not Implemented');
   if (data.roles.includes(role)) {
     const array = data.users;
     const index = array.findIndex((obj) => {

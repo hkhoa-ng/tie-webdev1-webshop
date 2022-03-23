@@ -1,4 +1,3 @@
-const {createNotification, postOrPutJSON} = require('./utils')
 /**
 api/register
  * TODO: 8.4 Register new user
@@ -13,37 +12,29 @@ api/register
 /**
  * Functions for modifying and deleting users.
  */
+const  comparePasswords = (p1, p2) => {
+  return p1 === p2;
+};
 
- (async() => {
-  const element = document.querySelector('#btnRegister');
-  const name = document.querySelector('#name').value;
-  const email = document.querySelector('#email').value;
-  const password = document.querySelector('#password').value;
-  const passwordConfirmation = document.querySelector('#passwordConfirmation').value;
+document.querySelector('#btnRegister').addEventListener('click', (event) => {
+  event.preventDefault();
 
-  console.log(name, '___________ name');
+  // Validate password
+  const password = document.querySelector('#password')
+  const passwordConfirmation = document.querySelector('#passwordConfirmation')
+  if (!comparePasswords(password.value, passwordConfirmation.value)) {
+      const container = passwordConfirmation.parentNode;
+      container.id = "pswd-confirmation-container";
+      createNotification('Passwords do not match', container.id, false);
+  } else {
+    // Same passwords => create new user
+    const form = document.querySelector('#register-form');
+    const formData = new FormData(form);
+    const data = {};
+    formData.forEach(function(value, key) {
+        data[key] = value;
+    })
+    postOrPutJSON('/api/register','POST', data);
+  }
 
-  element.addEventListener('click', (event) => {
-      event.preventDefault();
-
-      __user_data = {
-          "name": name,
-          "email": email,
-          "password": password,
-          "passwordConfirmation": passwordConfirmation
-      }
-
-
-      try {
-        const user = await postOrPutJSON(`/api/register`, 'POST', __user_data);
-        return createNotification(`Updated`, 'notifications-container');
-      } catch (error) {
-        console.error(error);
-        return createNotification('Update failed!', 'notifications-container', false);
-      }
-
-
-  });
-
- 
-})();
+});

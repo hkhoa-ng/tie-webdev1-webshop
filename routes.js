@@ -2,7 +2,6 @@
 /* eslint-disable complexity */
 /* eslint-disable max-lines-per-function */
 const responseUtils = require("./utils/responseUtils");
-// const requestUtils = require("./utils/requestUtils");
 const authUtils = require("./auth/auth.js");
 const {
   getCredentials,
@@ -30,6 +29,15 @@ const {
 const allowedMethods = {
   "/api/register": ["POST"],
   "/api/users": ["GET"],
+  "/api/products": ["GET"]
+};
+
+/**
+ * Read the products data in JSON
+ */
+const productData = {
+  // Make copies of products (prevents changing from outside this module/file)
+  products: require("./products.json").map((product) => ({ ...product }))
 };
 
 /**
@@ -135,9 +143,6 @@ const handleRequest = async (request, response) => {
       return responseUtils.sendJson(response, userToBeDeleted);
     }
     const userChangeRole = await parseBodyJson(request);
-    // console.log(userChangeRole);
-    // console.log(currentUser);
-    // console.log(getUserById(uid));
     if (method.toUpperCase() === "PUT") {
       const roleToChange = userChangeRole.role;
       if (
@@ -158,8 +163,7 @@ const handleRequest = async (request, response) => {
   if (!(filePath in allowedMethods)) return responseUtils.notFound(response);
 
   // See: http://restcookbook.com/HTTP%20Methods/options/
-  if (method.toUpperCase() === "OPTIONS")
-    return sendOptions(filePath, response);
+  if (method.toUpperCase() === "OPTIONS") return sendOptions(filePath, response);
 
   // Check for allowable methods
   if (!allowedMethods[filePath].includes(method.toUpperCase())) {
@@ -214,29 +218,39 @@ const handleRequest = async (request, response) => {
       );
     }
 
-    const dataJson = await parseBodyJson(request);
-    const { name, email, password } = dataJson;
+    const userAsJson = await parseBodyJson(request);
 
-    if (
-      dataJson.email === undefined ||
-      dataJson.name === undefined ||
-      dataJson.password === undefined
-    ) {
+    const userValidateErrors = validateUser(userAsJson);
+
+    if (userValidateErrors.length || emailInUse(userAsJson.email)) {
       return responseUtils.badRequest(response, "400 Bad Request");
+    } else {
+      const newUser = saveNewUser(userAsJson);
+      newUser.role = "customer";
     }
 
-    if (emailInUse(email)) {
-      return responseUtils.badRequest(response, "400 Bad Request");
-    }
+    return responseUtils.createdResource(response, newUser);
 
-    if (name && email && password) {
-      const __data = {
-        ...dataJson,
-        _id: "5558",
-        role: "customer",
-      };
-      return responseUtils.createdResource(response, __data, 201);
-    }
+    // if (
+    //   dataJson.email === undefined ||
+    //   dataJson.name === undefined ||
+    //   dataJson.password === undefined
+    // ) {
+    //   return responseUtils.badRequest(response, "400 Bad Request");
+    // }
+
+    // if (emailInUse(email)) {
+    //   return responseUtils.badRequest(response, "400 Bad Request");
+    // }
+
+    // if (name && email && password) {S
+    //   const __data = {
+    //     ...dataJson,
+    //     _id: "5558",
+    //     role: "customer",
+    //   };
+    //   return responseUtils.createdResource(response, __data, 201);
+    // }
     // TODO: 8.4 Implement registration
     // You can use parseBodyJson(request) method from utils/requestUtils.js to parse request body.
     // Useful methods here include:
@@ -244,6 +258,36 @@ const handleRequest = async (request, response) => {
     // - emailInUse(user.email) from /utils/users.js
     // - badRequest(response, message) from /utils/responseUtils.js
     // throw new Error('Not Implemented');
+  }
+
+  // Viewing all products
+  if (filePath === "/api/products" && method.toUpperCase() === "GET") {
+    /**
+     * AUTHORIZATION: Chech the authorization header of the request and response accordingly
+     */
+    const authorizationHeader = headers["authorization"];
+    // Response with basic auth challenge if auth header is missing/empty
+    if (!authorizationHeader) return responseUtils.basicAuthChallenge(response);
+    // Check if the header is properly encoded
+    const credentials = authorizationHeader.split(" ")[1];
+    const base64regex =
+      /^([0-9a-zA-Z+/]{4})*(([0-9a-zA-Z+/]{2}==)|([0-9a-zA-Z+/]{3}=))?$/;
+    if (!base64regex.test(credentials)) {
+      // Response with basic auth challenge if auth header is not properly encoded
+      return responseUtils.basicAuthChallenge(response);
+    }
+    // If all is good, attempt to get the current user
+    const currentUser = await authUtils
+    .getCurrentUser(request)
+    .then((user) => user);
+    if (currentUser === undefined) {
+      // Response with basic auth challenge if credentials are incorrect (no user found)
+      return responseUtils.basicAuthChallenge(response);
+    }
+
+    // Respond with JSON object contains all products
+    const getAllProducts = () => productData.products.map((product) => ({ ...product }));
+    return responseUtils.sendJson(response, getAllProducts());
   }
 };
 
