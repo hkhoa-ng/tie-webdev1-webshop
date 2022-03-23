@@ -29,7 +29,7 @@ const {
 const allowedMethods = {
   "/api/register": ["POST"],
   "/api/users": ["GET"],
-  "/api/products": ["GET"]
+  "/api/products": ["GET"],
 };
 /**
  * Read the products data in JSON
@@ -184,7 +184,7 @@ const handleRequest = async (request, response) => {
       // response with basic auth challenge if auth header is not properly encoded
       return responseUtils.basicAuthChallenge(response);
     }
-
+    
     // If all is good, attempt to get the current user
     const currentUser = await authUtils
       .getCurrentUser(request)

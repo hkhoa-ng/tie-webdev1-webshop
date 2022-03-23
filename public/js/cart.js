@@ -1,21 +1,29 @@
+
 const addToCart = productId => {
   // TODO 9.2
   // use addProductToCart(), available already from /public/js/utils.js
   // call updateProductAmount(productId) from this file
+  addProductToCart(productId);
+  updateProductAmount(productId);
 };
 
 const decreaseCount = productId => {
+  console.log("removed!");
   // TODO 9.2
   // Decrease the amount of products in the cart, /public/js/utils.js provides decreaseProductCount()
   // Remove product from cart if amount is 0,  /public/js/utils.js provides removeElement = (containerId, elementId
-
+  const count = decreaseProductCount(productId);
+  updateProductAmount(productId);
+  if (count === 0) removeElement('cart-container', productId);
 };
 
 const updateProductAmount = productId => {
   // TODO 9.2
   // - read the amount of products in the cart, /public/js/utils.js provides getProductCountFromCart(productId)
   // - change the amount of products shown in the right element's innerText
-
+  const count = getProductCountFromCart(productId);
+  const amountShow = document.querySelector(`#amount-${productId}`);
+  amountShow.textContent = `${count}x`;
 };
 
 const placeOrder = async() => {
@@ -23,6 +31,12 @@ const placeOrder = async() => {
   // Get all products from the cart, /public/js/utils.js provides getAllProductsFromCart()
   // show the user a notification: /public/js/utils.js provides createNotification = (message, containerId, isSuccess = true)
   // for each of the products in the cart remove them, /public/js/utils.js provides removeElement(containerId, elementId)
+  const allProducts = getAllProductsFromCart();
+  createNotification("Successfully created an order!", "notifications-container");
+  for (const product of allProducts) {
+    let {name:id} = product;
+    removeElement('cart-container', id);
+  }
 };
 
 (async() => {
@@ -49,5 +63,38 @@ const placeOrder = async() => {
   //          clone.querySelector('button').addEventListener('click', () => addToCart(productId, productName));
   //
   // - in the end remember to append the modified cart item to the cart 
+  const cartContainer = document.querySelector("#cart-container");
 
+  const products = await getJSON("/api/products");
+  const productsFromCart = getAllProductsFromCart();
+
+  const itemTemplate = document.querySelector("#cart-item-template");
+
+  document.querySelector('#place-order-button').addEventListener('click', () => placeOrder());
+
+
+  for (const product of productsFromCart) {
+    let {name:id, amount} = product;
+    if (amount === "NaN") amount = 0;
+    const productInfo = products.find(product => product._id == id);
+    const {price, name} = productInfo;
+    
+        const clone = itemTemplate.content.cloneNode(true);
+
+        clone.querySelector('.item-row').id = id;
+        clone.querySelector('h3').id = `name-${id}`;
+        clone.querySelector('h3').textContent = name;
+        clone.querySelector('.product-price').id = `price-${id}`;
+        clone.querySelector('.product-price').textContent = price;
+        clone.querySelector('.product-amount').id = `amount-${id}`;
+        clone.querySelector('.product-amount').textContent = `${amount}x`;
+
+        let buttons = clone.querySelectorAll('button');
+        buttons.item(0).id = `plus-${id}`;
+        buttons.item(0).addEventListener('click', () => addToCart(id));
+        buttons.item(1).id = `minus-${id}`;
+        buttons.item(1).addEventListener('click', () => decreaseCount(id));
+
+        cartContainer.appendChild(clone);
+  };
 })();
