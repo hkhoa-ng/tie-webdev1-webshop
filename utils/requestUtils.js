@@ -1,3 +1,4 @@
+// const Buffer = require("buffer");
 /**
  * Decode, parse and return user credentials (username and password)
  * from the Authorization header.
@@ -6,11 +7,13 @@
  * @returns {Array|null} array [username, password] from Authorization header, or null if header is missing
  */
 const getCredentials = (request) => {
-  // DONE: 8.5 Parse user credentials from the "Authorization" request header
+  // TODO: 8.5 Parse user credentials from the "Authorization" request header
+  // NOTE: The header is base64 encoded as required by the http standard.
+  //       You need to first decode the header back to its original form ("email:password").
+  //  See: https://attacomsian.com/blog/nodejs-base64-encode-decode
+  //       https://stackabuse.com/encoding-and-decoding-base64-strings-in-node-js/
   const authorization = request.headers["authorization"];
-  // Return null if the authorization header is missing
   if (!authorization) return null;
-  // Get the authorization type and encoded credentials
   const array = authorization.split(" ");
   const type = array[0];
   if (type === "Basic") {
@@ -50,13 +53,13 @@ const acceptsJson = (request) => {
  * @param {http.incomingMessage} request
  * @returns {boolean}
  */
-// DONE: 8.4 Check whether request "Content-Type" is JSON or not
 const isJson = (request) => {
   if (request.headers["content-type"] === "application/json") {
     return true;
   } else {
     return false;
   }
+  // TODO: 8.4 Check whether request "Content-Type" is JSON or not // Done
 };
 
 /**

@@ -33,14 +33,6 @@ const allowedMethods = {
 };
 
 /**
- * Read the products data in JSON
- */
-const productData = {
-  // Make copies of products (prevents changing from outside this module/file)
-  products: require("./products.json").map((product) => ({ ...product }))
-};
-
-/**
  * Send response to client options request.
  *
  * @param {string} filePath pathname of the request URL
@@ -95,20 +87,11 @@ const handleRequest = async (request, response) => {
   }
 
   if (matchUserId(filePath)) {
+    // DONE: 8.6 Implement view, update and delete a single user by ID (GET, PUT, DELETE)
     if (!request.headers.authorization) {
       response.setHeader("WWW-Authenticate", "Basic");
       return responseUtils.unauthorized(response);
     }
-
-    // TODO: 8.6 Implement view, update and delete a single user by ID (GET, PUT, DELETE)
-    // You can use parseBodyJson(request) from utils/requestUtils.js to parse request body
-    // If the HTTP method of a request is OPTIONS you can use sendOptions(filePath, response) function from this module
-    // If there is no currently logged in user, you can use basicAuthChallenge(response) from /utils/responseUtils.js to ask for credentials
-    //  If the current user's role is not admin you can use forbidden(response) from /utils/responseUtils.js to send a reply
-    // Useful methods here include:
-    // - getUserById(userId) from /utils/users.js
-    // - notFound(response) from  /utils/responseUtils.js
-    // - sendJson(response,  payload)  from  /utils/responseUtils.js can be used to send the requested data in JSON format
 
     const authorizationHeader = headers["authorization"];
     if (!authorizationHeader) {
@@ -163,7 +146,8 @@ const handleRequest = async (request, response) => {
   if (!(filePath in allowedMethods)) return responseUtils.notFound(response);
 
   // See: http://restcookbook.com/HTTP%20Methods/options/
-  if (method.toUpperCase() === "OPTIONS") return sendOptions(filePath, response);
+  if (method.toUpperCase() === "OPTIONS")
+    return sendOptions(filePath, response);
 
   // Check for allowable methods
   if (!allowedMethods[filePath].includes(method.toUpperCase())) {
@@ -210,84 +194,24 @@ const handleRequest = async (request, response) => {
 
   // register new user
   if (filePath === "/api/register" && method.toUpperCase() === "POST") {
+    // DONE: 8.4 Implement user registration
     // Fail if not a JSON request, don't allow non-JSON Content-Type
     if (!isJson(request)) {
-      return responseUtils.badRequest(
-        response,
-        "Invalid Content-Type. Expected application/json"
-      );
+      return responseUtils.badRequest(response, 'Invalid Content-Type. Expected application/json');
     }
-
     const userAsJson = await parseBodyJson(request);
-
-    const userValidateErrors = validateUser(userAsJson);
-
-    if (userValidateErrors.length || emailInUse(userAsJson.email)) {
-      return responseUtils.badRequest(response, "400 Bad Request");
-    } else {
-      const newUser = saveNewUser(userAsJson);
-      newUser.role = "customer";
+    const errors = validateUser(userAsJson);
+    if (errors.length) {
+      return responseUtils.badRequest(response, errors);
+    }
+    if (emailInUse(userAsJson.email)) {
+      return responseUtils.badRequest(response, 'Email already in use!');
     }
 
+    let newUser = saveNewUser(userAsJson);
+    newUser.role = "customer";
     return responseUtils.createdResource(response, newUser);
 
-    // if (
-    //   dataJson.email === undefined ||
-    //   dataJson.name === undefined ||
-    //   dataJson.password === undefined
-    // ) {
-    //   return responseUtils.badRequest(response, "400 Bad Request");
-    // }
-
-    // if (emailInUse(email)) {
-    //   return responseUtils.badRequest(response, "400 Bad Request");
-    // }
-
-    // if (name && email && password) {S
-    //   const __data = {
-    //     ...dataJson,
-    //     _id: "5558",
-    //     role: "customer",
-    //   };
-    //   return responseUtils.createdResource(response, __data, 201);
-    // }
-    // TODO: 8.4 Implement registration
-    // You can use parseBodyJson(request) method from utils/requestUtils.js to parse request body.
-    // Useful methods here include:
-    // - validateUser(user) from /utils/users.js
-    // - emailInUse(user.email) from /utils/users.js
-    // - badRequest(response, message) from /utils/responseUtils.js
-    // throw new Error('Not Implemented');
-  }
-
-  // Viewing all products
-  if (filePath === "/api/products" && method.toUpperCase() === "GET") {
-    /**
-     * AUTHORIZATION: Chech the authorization header of the request and response accordingly
-     */
-    const authorizationHeader = headers["authorization"];
-    // Response with basic auth challenge if auth header is missing/empty
-    if (!authorizationHeader) return responseUtils.basicAuthChallenge(response);
-    // Check if the header is properly encoded
-    const credentials = authorizationHeader.split(" ")[1];
-    const base64regex =
-      /^([0-9a-zA-Z+/]{4})*(([0-9a-zA-Z+/]{2}==)|([0-9a-zA-Z+/]{3}=))?$/;
-    if (!base64regex.test(credentials)) {
-      // Response with basic auth challenge if auth header is not properly encoded
-      return responseUtils.basicAuthChallenge(response);
-    }
-    // If all is good, attempt to get the current user
-    const currentUser = await authUtils
-    .getCurrentUser(request)
-    .then((user) => user);
-    if (currentUser === undefined) {
-      // Response with basic auth challenge if credentials are incorrect (no user found)
-      return responseUtils.basicAuthChallenge(response);
-    }
-
-    // Respond with JSON object contains all products
-    const getAllProducts = () => productData.products.map((product) => ({ ...product }));
-    return responseUtils.sendJson(response, getAllProducts());
   }
 };
 
