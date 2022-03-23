@@ -37,6 +37,7 @@ const placeOrder = async() => {
     let {name:id} = product;
     removeElement('cart-container', id);
   }
+  clearCart();
 };
 
 (async() => {
