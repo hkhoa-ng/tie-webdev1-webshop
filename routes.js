@@ -31,6 +31,14 @@ const allowedMethods = {
   "/api/users": ["GET"],
   "/api/products": ["GET"]
 };
+/**
+ * Read the products data in JSON
+ */
+ const productData = {
+  // Make copies of products (prevents changing from outside this module/file)
+  products: require("./products.json").map((product) => ({ ...product }))
+};
+
 
 /**
  * Send response to client options request.
@@ -212,6 +220,35 @@ const handleRequest = async (request, response) => {
     newUser.role = "customer";
     return responseUtils.createdResource(response, newUser);
 
+  }
+
+  if (filePath === "/api/products" && method.toUpperCase() === "GET") {
+    /**
+     * AUTHORIZATION: Chech the authorization header of the request and response accordingly
+     */
+    const authorizationHeader = headers["authorization"];
+    // Response with basic auth challenge if auth header is missing/empty
+    if (!authorizationHeader) return responseUtils.basicAuthChallenge(response);
+    // Check if the header is properly encoded
+    const credentials = authorizationHeader.split(" ")[1];
+    const base64regex =
+      /^([0-9a-zA-Z+/]{4})*(([0-9a-zA-Z+/]{2}==)|([0-9a-zA-Z+/]{3}=))?$/;
+    if (!base64regex.test(credentials)) {
+      // Response with basic auth challenge if auth header is not properly encoded
+      return responseUtils.basicAuthChallenge(response);
+    }
+    // If all is good, attempt to get the current user
+    const currentUser = await authUtils
+    .getCurrentUser(request)
+    .then((user) => user);
+    if (currentUser === undefined) {
+      // Response with basic auth challenge if credentials are incorrect (no user found)
+      return responseUtils.basicAuthChallenge(response);
+    }
+
+    // Respond with JSON object contains all products
+    const getAllProducts = () => productData.products.map((product) => ({ ...product }));
+    return responseUtils.sendJson(response, getAllProducts());
   }
 };
 
