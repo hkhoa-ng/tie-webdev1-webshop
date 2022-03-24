@@ -1,5 +1,5 @@
-const mongoose = require('mongoose');
-
+const mongoose = require("mongoose");
+require("dotenv").config();
 /**
  * Get database connect URL.
  *
@@ -11,7 +11,12 @@ const mongoose = require('mongoose');
  */
 const getDbUrl = () => {
   // TODO: 9.4 Implement this
-  throw new Error('Implement this');
+  const path = process.env.DBURL;
+  const defaultUrl = "mongodb://localhost:27017/WebShopDb";
+  if (!path) {
+    return defaultUrl;
+  }
+  return path;
 };
 
 function connectDB() {
@@ -23,14 +28,14 @@ function connectDB() {
         useUnifiedTopology: true,
         useFindAndModify: false,
         useCreateIndex: true,
-        autoIndex: true
+        autoIndex: true,
       })
       .then(() => {
-        mongoose.connection.on('error', err => {
+        mongoose.connection.on("error", (err) => {
           console.error(err);
         });
 
-        mongoose.connection.on('reconnectFailed', handleCriticalError);
+        mongoose.connection.on("reconnectFailed", handleCriticalError);
       })
       .catch(handleCriticalError);
   }
