@@ -19,7 +19,7 @@ const {
   updateUserRole,
   deleteUserById,
 } = require("./utils/users");
-
+const User = require("./models/user");
 /**
  * Known API routes and their allowed methods
  *

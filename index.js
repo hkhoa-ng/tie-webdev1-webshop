@@ -1,5 +1,12 @@
 const http = require('http');
 const { handleRequest } = require('./routes');
+const { connectDB, disconnectDB } = require('./models/db');
+
+
+(async () => {
+  connectDB();
+})();
+
 
 const PORT = process.env.PORT || 3000;
 const server = http.createServer(handleRequest);
