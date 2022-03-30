@@ -10,15 +10,20 @@ const {
   parseBodyJson,
 } = require("./utils/requestUtils");
 const { renderPublic } = require("./utils/render");
-const {
-  emailInUse,
-  getAllUsers,
-  saveNewUser,
-  validateUser,
-  getUserById,
-  updateUserRole,
-  deleteUserById,
-} = require("./utils/users");
+// const {
+//   emailInUse,
+//   getAllUsers,
+//   saveNewUser,
+//   validateUser,
+//   getUserById,
+//   updateUserRole,
+//   deleteUserById,
+// } = require("./utils/users");
+
+// Require user model
+const User = require("./models/user");
+// Find all users
+const users = await User.find({});
 
 /**
  * Known API routes and their allowed methods
@@ -34,11 +39,10 @@ const allowedMethods = {
 /**
  * Read the products data in JSON
  */
- const productData = {
+const productData = {
   // Make copies of products (prevents changing from outside this module/file)
-  products: require("./products.json").map((product) => ({ ...product }))
+  products: require("./products.json").map((product) => ({ ...product })),
 };
-
 
 /**
  * Send response to client options request.
@@ -118,7 +122,7 @@ const handleRequest = async (request, response) => {
       return responseUtils.basicAuthChallenge(response);
     }
     const uid = filePath.split("/")[3];
-    if (getUserById(uid) === undefined) {
+    if (User.findById(uid).exec() === null) {
       return responseUtils.notFound(response);
     }
     // response with basic auth challenge if customer credentials are parse
@@ -129,8 +133,10 @@ const handleRequest = async (request, response) => {
       return responseUtils.sendJson(response, currentUser);
     }
     if (method.toUpperCase() === "DELETE" && currentUser.role === "admin") {
-      const userToBeDeleted = getUserById(uid);
-      deleteUserById(uid);
+      // Find user to be deleted with ID, and then delete and return that user
+      const userToBeDeleted = await User.findById(uid).exec();
+      User.deleteOne({ _id: uid });
+      // deleteUserById(uid);
       return responseUtils.sendJson(response, userToBeDeleted);
     }
     const userChangeRole = await parseBodyJson(request);
@@ -144,8 +150,11 @@ const handleRequest = async (request, response) => {
       }
 
       if (currentUser.role === "admin") {
-        updateUserRole(uid, userChangeRole.role);
-        return responseUtils.sendJson(response, getUserById(uid));
+        // updateUserRole(uid, userChangeRole.role);
+        const userToChange = User.findById(uid).exec();
+        userToChange.role = userChangeRole.role;
+        await userToChange.save();
+        return responseUtils.sendJson(response, User.findById(uid).exec());
       }
     }
   }
@@ -184,7 +193,7 @@ const handleRequest = async (request, response) => {
       // response with basic auth challenge if auth header is not properly encoded
       return responseUtils.basicAuthChallenge(response);
     }
-    
+
     // If all is good, attempt to get the current user
     const currentUser = await authUtils
       .getCurrentUser(request)
@@ -205,7 +214,10 @@ const handleRequest = async (request, response) => {
     // DONE: 8.4 Implement user registration
     // Fail if not a JSON request, don't allow non-JSON Content-Type
     if (!isJson(request)) {
-      return responseUtils.badRequest(response, 'Invalid Content-Type. Expected application/json');
+      return responseUtils.badRequest(
+        response,
+        "Invalid Content-Type. Expected application/json"
+      );
     }
     const userAsJson = await parseBodyJson(request);
     const errors = validateUser(userAsJson);
@@ -213,13 +225,12 @@ const handleRequest = async (request, response) => {
       return responseUtils.badRequest(response, errors);
     }
     if (emailInUse(userAsJson.email)) {
-      return responseUtils.badRequest(response, 'Email already in use!');
+      return responseUtils.badRequest(response, "Email already in use!");
     }
 
     let newUser = saveNewUser(userAsJson);
     newUser.role = "customer";
     return responseUtils.createdResource(response, newUser);
-
   }
 
   if (filePath === "/api/products" && method.toUpperCase() === "GET") {
@@ -239,15 +250,16 @@ const handleRequest = async (request, response) => {
     }
     // If all is good, attempt to get the current user
     const currentUser = await authUtils
-    .getCurrentUser(request)
-    .then((user) => user);
+      .getCurrentUser(request)
+      .then((user) => user);
     if (currentUser === undefined) {
       // Response with basic auth challenge if credentials are incorrect (no user found)
       return responseUtils.basicAuthChallenge(response);
     }
 
     // Respond with JSON object contains all products
-    const getAllProducts = () => productData.products.map((product) => ({ ...product }));
+    const getAllProducts = () =>
+      productData.products.map((product) => ({ ...product }));
     return responseUtils.sendJson(response, getAllProducts());
   }
 };

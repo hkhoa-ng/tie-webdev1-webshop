@@ -1,21 +1,21 @@
-const { createNotification } = require("../public/js/utils");
+// const { createNotification } = require("../public/js/utils");
 const {
-  acceptsJson,
+  // acceptsJson,
   getCredentials,
-  isJson,
-  parseBodyJson,
+  // isJson,
+  // parseBodyJson,
 } = require("../utils/requestUtils");
-const {
-  deleteUserById,
-  emailInUse,
-  getAllUsers,
-  getUser,
-  getUserById,
-  resetUsers,
-  saveNewUser,
-  updateUserRole,
-  validateUser,
-} = require("../utils/users.js");
+// const {
+//   deleteUserById,
+//   emailInUse,
+//   getAllUsers,
+//   getUser,
+//   getUserById,
+//   resetUsers,
+//   saveNewUser,
+//   updateUserRole,
+//   validateUser,
+// } = require("../utils/users.js");
 /**
  * Get current user based on the request headers
  *
@@ -25,7 +25,17 @@ const {
 const getCurrentUser = async (request) => {
   // DONE: 8.5 Implement getting current user based on the "Authorization" request header
   const credentials = getCredentials(request);
-  const currentUser = await getUser(credentials[0], credentials[1]);
+  if (credentials === null) {
+    return null;
+  }
+  // const currentUser = await getUser(credentials[0], credentials[1]);
+  const currentUser = await User.findOne({ email: credentials[0] }).exec();
+  if (currentUser === null) {
+    return null;
+  }
+  if (!currentUser.comparePassword(credentials[1])) {
+    return null;
+  }
   return currentUser;
 };
 
