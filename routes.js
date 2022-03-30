@@ -220,6 +220,7 @@ const handleRequest = async (request, response) => {
       );
     }
     const userAsJson = await parseBodyJson(request);
+    const user = await User.findOne({ email: userAsJson.email }).exec();
     const errors = validateUser(userAsJson);
     if (errors.length) {
       return responseUtils.badRequest(response, errors);
@@ -228,8 +229,9 @@ const handleRequest = async (request, response) => {
       return responseUtils.badRequest(response, "Email already in use!");
     }
 
-    let newUser = saveNewUser(userAsJson);
+    const newUser = new User(userAsJson);
     newUser.role = "customer";
+    await newUser.save();
     return responseUtils.createdResource(response, newUser);
   }
 
