@@ -23,7 +23,7 @@ const { renderPublic } = require("./utils/render");
 // Require user model
 const User = require("./models/user");
 // Find all users
-const users = await User.find({});
+const users = User.find({});
 
 /**
  * Known API routes and their allowed methods
