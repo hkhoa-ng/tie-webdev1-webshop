@@ -27,8 +27,7 @@ const validateUser = (user) => {
 
 // Require user model
 const User = require("./models/user");
-// Find all users
-const users = User.find({});
+
 
 /**
  * Known API routes and their allowed methods
@@ -93,6 +92,9 @@ const matchUserId = (url) => {
 };
 
 const handleRequest = async (request, response) => {
+  // Find all users
+  const users = await User.find({});
+
   const { url, method, headers } = request;
   const filePath = new URL(url, `http://${headers.host}`).pathname;
 
@@ -119,9 +121,7 @@ const handleRequest = async (request, response) => {
     if (method.toUpperCase() === "OPTIONS") {
       return sendOptions(filePath, response);
     }
-    const currentUser = await authUtils
-      .getCurrentUser(request)
-      .then((user) => user);
+    const currentUser = await getCurrentUser(request);
     if (currentUser === null) {
       // response with basic auth challenge if credentials are incorrect
       return responseUtils.basicAuthChallenge(response);
@@ -140,8 +140,10 @@ const handleRequest = async (request, response) => {
     if (method.toUpperCase() === "DELETE" && currentUser.role === "admin") {
       // Find user to be deleted with ID, and then delete and return that user
       const userToBeDeleted = await User.findById(uid).exec();
-      User.deleteOne({ _id: uid });
-      // deleteUserById(uid);
+      if (userToBeDeleted === null) {
+        return responseUtils.notFound(response);
+      }
+      await User.deleteOne({ _id: uid });
       return responseUtils.sendJson(response, userToBeDeleted);
     }
     const userChangeRole = await parseBodyJson(request);
@@ -155,11 +157,11 @@ const handleRequest = async (request, response) => {
       }
 
       if (currentUser.role === "admin") {
-        // updateUserRole(uid, userChangeRole.role);
-        const userToChange = User.findById(uid).exec();
-        userToChange.role = userChangeRole.role;
+        // Only update user role if role = admin
+        const userToChange = await User.findById(uid).exec();
+        userToChange.role = roleToChange;
         await userToChange.save();
-        return responseUtils.sendJson(response, User.findById(uid).exec());
+        return responseUtils.sendJson(response, userToChange);
       }
     }
   }
@@ -257,26 +259,20 @@ const handleRequest = async (request, response) => {
     /**
      * AUTHORIZATION: Chech the authorization header of the request and response accordingly
      */
-    
+  
     const authorizationHeader = headers["authorization"];
-    console.log("1")
     // Response with basic auth challenge if auth header is missing/empty
     if (!authorizationHeader) return responseUtils.basicAuthChallenge(response);
     // Check if the header is properly encoded
     const credentials = authorizationHeader.split(" ")[1];
     const base64regex =
       /^([0-9a-zA-Z+/]{4})*(([0-9a-zA-Z+/]{2}==)|([0-9a-zA-Z+/]{3}=))?$/;
-    console.log("2")
     if (!base64regex.test(credentials)) {
       // Response with basic auth challenge if auth header is not properly encoded
       return responseUtils.basicAuthChallenge(response);
     }
     // If all is good, attempt to get the current user
-    const currentUser = await authUtils
-      .getCurrentUser(request)
-      .then((user) => user);
-
-      console.log("3")
+    const currentUser = await getCurrentUser(request);
     
     if (currentUser === null) {
       // Response with basic auth challenge if credentials are incorrect (no user found)
@@ -286,7 +282,6 @@ const handleRequest = async (request, response) => {
     // Respond with JSON object contains all products
     const getAllProducts = () =>
       productData.products.map((product) => ({ ...product }));
-    console.log("4")
     return responseUtils.sendJson(response, getAllProducts());
   }
 };
