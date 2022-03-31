@@ -199,31 +199,21 @@ const handleRequest = async (request, response) => {
       return responseUtils.basicAuthChallenge(response);
     }
 
-    // If all is good, attempt to get the current user
-    // TODO: Cant seem to retrieve the return of getCurrentUser here? Even tho the code is 
-    // working completely fine in the other file (we tried console.log the user over there, 
-    // and it prints out the user object).
-    const currentUser = await getCurrentUser(request);
-    (async () => {
-      console.log(await getCurrentUser(request));
-    })();
-
-
-    getCurrentUser(request).then((user) => {
-      console.log(user);
+    getCurrentUser(request).then((currentUser) => {
+      
+      if (currentUser === null) {
+        // response with basic auth challenge if credentials are incorrect (no user found)
+        return responseUtils.basicAuthChallenge(response);
+      }
+      // console.log("4")
+      // response with basic auth challenge if customer credentials are parsed
+      if (currentUser.role === "customer") {
+        return responseUtils.forbidden(response);
+      }
+      // console.log("5")
+      return responseUtils.sendJson(response, users);
     });
-    // console.log("3")
-    if (currentUser === null) {
-      // response with basic auth challenge if credentials are incorrect (no user found)
-      return responseUtils.basicAuthChallenge(response);
-    }
-    // console.log("4")
-    // response with basic auth challenge if customer credentials are parsed
-    if (currentUser.role === "customer") {
-      return responseUtils.forbidden(response);
-    }
-    // console.log("5")
-    return responseUtils.sendJson(response, users);
+    
   }
 
   // register new user

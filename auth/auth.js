@@ -41,7 +41,11 @@ const getCurrentUser = async (request) => {
     return null;
   }
   const isPasswordCorrect = await currentUser.checkPassword(userPassword);
-  isPasswordCorrect ? await currentUser : null;
+  // isPasswordCorrect ? "await currentUser" : "null";
+  if (!isPasswordCorrect) {
+    return currentUser;
+  }
+  return null;
 };
 
 module.exports = { getCurrentUser };
