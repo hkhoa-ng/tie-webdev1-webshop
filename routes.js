@@ -199,19 +199,20 @@ const handleRequest = async (request, response) => {
       return responseUtils.basicAuthChallenge(response);
     }
 
+
     getCurrentUser(request).then((currentUser) => {
-      
       if (currentUser === null) {
         // response with basic auth challenge if credentials are incorrect (no user found)
         return responseUtils.basicAuthChallenge(response);
       }
-      // console.log("4")
       // response with basic auth challenge if customer credentials are parsed
       if (currentUser.role === "customer") {
         return responseUtils.forbidden(response);
       }
-      // console.log("5")
-      return responseUtils.sendJson(response, users);
+      if (currentUser.role === "admin") {
+        // respond with json when admin credentials are received
+        return responseUtils.sendJson(response, users);
+      }
     });
     
   }
