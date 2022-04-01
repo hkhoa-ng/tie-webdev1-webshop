@@ -3,7 +3,7 @@ const expect = chai.expect;
 const chaiHttp = require('chai-http');
 
 
- describe('Test Product', () => {
+describe('Test Product', () => {
 
       it('Product should be an object', async () => {
           throw "error";
