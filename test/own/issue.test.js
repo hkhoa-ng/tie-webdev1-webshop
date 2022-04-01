@@ -3,8 +3,6 @@ const expect = chai.expect;
 const chaiHttp = require('chai-http');
 
 
-console.log('____________ 006');
-
  describe('Test Product', () => {
 
       it('Product should be an object', async () => {
