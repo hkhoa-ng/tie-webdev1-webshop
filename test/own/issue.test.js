@@ -3,26 +3,63 @@ const expect = chai.expect;
 const chaiHttp = require('chai-http');
 
 
- describe('Test issues', () => {
-      it('Test class', async () => {
+ describe('Test Product', () => {
 
-           expect(function(){utils.which_min();}).to.throw("Cannot read property 'length' of undefined")
-
-        
-      });
-
-      it('Issue 01', async () => {
-        
-      });
-
-       it('Issue 02', async () => {
+      it('Product should be an object', async () => {
+           expect(() => ).to.throw('Error');
         
       });
 
 
-      it('Issue 03', async () => {
+
+      it('Product have sll key name, _id, price, description', async () => {
+           expect(() => ).to.throw('Error');
         
       });
-
       
 });
+
+
+
+  describe('Test User', () => {
+
+     it('User should be an object', async () => {
+           expect(() => ).to.throw('Error');
+        
+      });
+
+     it('Get current user', async () => {
+           expect(() => ).to.throw('Error');
+        
+      });
+
+      it('Get user role', async () => {
+           expect(() => ).to.throw('Error');
+        
+      });
+
+     it('Delete User', async () => {
+           expect(() => ).to.throw('Error');
+        
+     });
+
+     it('Get single user', async () => {
+           expect(() => ).to.throw('Error');
+     });
+
+     it('Authenticate Check', async () => {
+          expect(() => ).to.throw('Error');
+        
+     });
+          
+     it('Email Test', async () => {
+          expect(() => ).to.throw('Error');
+        
+     });
+
+     it('Password Test', async () => {
+          expect(() => ).to.throw('Error');
+        
+     });
+
+  });
