@@ -3,17 +3,19 @@ const expect = chai.expect;
 const chaiHttp = require('chai-http');
 
 
+console.log('____________ 006');
+
  describe('Test Product', () => {
 
       it('Product should be an object', async () => {
-           expect(() => ).to.throw('Error');
+          throw "error";
         
       });
 
 
 
       it('Product have sll key name, _id, price, description', async () => {
-           expect(() => ).to.throw('Error');
+           throw "error";
         
       });
       
@@ -24,41 +26,41 @@ const chaiHttp = require('chai-http');
   describe('Test User', () => {
 
      it('User should be an object', async () => {
-           expect(() => ).to.throw('Error');
+           throw "error";
         
       });
 
      it('Get current user', async () => {
-           expect(() => ).to.throw('Error');
+           throw "error";
         
       });
 
       it('Get user role', async () => {
-           expect(() => ).to.throw('Error');
+           throw "error";
         
       });
 
      it('Delete User', async () => {
-           expect(() => ).to.throw('Error');
+           throw "error";
         
      });
 
      it('Get single user', async () => {
-           expect(() => ).to.throw('Error');
+           throw "error";
      });
 
      it('Authenticate Check', async () => {
-          expect(() => ).to.throw('Error');
+          throw "error";
         
      });
           
      it('Email Test', async () => {
-          expect(() => ).to.throw('Error');
+          throw "error";
         
      });
 
      it('Password Test', async () => {
-          expect(() => ).to.throw('Error');
+          throw "error";
         
      });
 
