@@ -5,6 +5,9 @@ const {
   // isJson,
   // parseBodyJson,
 } = require("../utils/requestUtils");
+// require user model
+const User = require("../models/user");
+
 // const {
 //   deleteUserById,
 //   emailInUse,
@@ -25,18 +28,25 @@ const {
 const getCurrentUser = async (request) => {
   // DONE: 8.5 Implement getting current user based on the "Authorization" request header
   const credentials = getCredentials(request);
-  if (credentials === null) {
+  const userEmail = credentials[0];
+  const userPassword = credentials[1];
+  if (credentials.length === 0) {
+    console.log("No credentials!");
     return null;
   }
   // const currentUser = await getUser(credentials[0], credentials[1]);
-  const currentUser = await User.findOne({ email: credentials[0] }).exec();
+  const currentUser = await User.findOne({ email: userEmail }).exec();
   if (currentUser === null) {
+    console.log("Found no user with given email!");
     return null;
   }
-  if (!currentUser.comparePassword(credentials[1])) {
+  const isPasswordCorrect = await currentUser.checkPassword(userPassword);
+  // isPasswordCorrect ? "await currentUser" : "null";
+  if (!isPasswordCorrect) {
     return null;
   }
   return currentUser;
+  
 };
 
 module.exports = { getCurrentUser };

@@ -2,7 +2,8 @@
 /* eslint-disable complexity */
 /* eslint-disable max-lines-per-function */
 const responseUtils = require("./utils/responseUtils");
-const authUtils = require("./auth/auth.js");
+// const authUtils = require("./auth/auth.js");
+const { getCurrentUser } = require("./auth/auth.js");
 const {
   getCredentials,
   acceptsJson,
@@ -10,20 +11,23 @@ const {
   parseBodyJson,
 } = require("./utils/requestUtils");
 const { renderPublic } = require("./utils/render");
-// const {
-//   emailInUse,
-//   getAllUsers,
-//   saveNewUser,
-//   validateUser,
-//   getUserById,
-//   updateUserRole,
-//   deleteUserById,
-// } = require("./utils/users");
+
+const validateUser = (user) => {
+  const errors = [];
+
+  const roles = ["customer", "admin"];
+
+  if (!user.name) errors.push("Missing name");
+  if (!user.email) errors.push("Missing email");
+  if (!user.password) errors.push("Missing password");
+  if (user.role && !roles.includes(user.role)) errors.push("Unknown role");
+
+  return errors;
+};
 
 // Require user model
 const User = require("./models/user");
-// Find all users
-const users = User.find({});
+
 
 /**
  * Known API routes and their allowed methods
@@ -88,6 +92,9 @@ const matchUserId = (url) => {
 };
 
 const handleRequest = async (request, response) => {
+  // Find all users
+  const users = await User.find({});
+
   const { url, method, headers } = request;
   const filePath = new URL(url, `http://${headers.host}`).pathname;
 
@@ -114,10 +121,8 @@ const handleRequest = async (request, response) => {
     if (method.toUpperCase() === "OPTIONS") {
       return sendOptions(filePath, response);
     }
-    const currentUser = await authUtils
-      .getCurrentUser(request)
-      .then((user) => user);
-    if (currentUser === undefined) {
+    const currentUser = await getCurrentUser(request);
+    if (currentUser === null) {
       // response with basic auth challenge if credentials are incorrect
       return responseUtils.basicAuthChallenge(response);
     }
@@ -135,8 +140,10 @@ const handleRequest = async (request, response) => {
     if (method.toUpperCase() === "DELETE" && currentUser.role === "admin") {
       // Find user to be deleted with ID, and then delete and return that user
       const userToBeDeleted = await User.findById(uid).exec();
-      User.deleteOne({ _id: uid });
-      // deleteUserById(uid);
+      if (userToBeDeleted === null) {
+        return responseUtils.notFound(response);
+      }
+      await User.deleteOne({ _id: uid });
       return responseUtils.sendJson(response, userToBeDeleted);
     }
     const userChangeRole = await parseBodyJson(request);
@@ -150,11 +157,11 @@ const handleRequest = async (request, response) => {
       }
 
       if (currentUser.role === "admin") {
-        // updateUserRole(uid, userChangeRole.role);
-        const userToChange = User.findById(uid).exec();
-        userToChange.role = userChangeRole.role;
+        // Only update user role if role = admin
+        const userToChange = await User.findById(uid).exec();
+        userToChange.role = roleToChange;
         await userToChange.save();
-        return responseUtils.sendJson(response, User.findById(uid).exec());
+        return responseUtils.sendJson(response, userToChange);
       }
     }
   }
@@ -194,19 +201,22 @@ const handleRequest = async (request, response) => {
       return responseUtils.basicAuthChallenge(response);
     }
 
-    // If all is good, attempt to get the current user
-    const currentUser = await authUtils
-      .getCurrentUser(request)
-      .then((user) => user);
-    if (currentUser === undefined) {
-      // response with basic auth challenge if credentials are incorrect (no user found)
-      return responseUtils.basicAuthChallenge(response);
-    }
-    // response with basic auth challenge if customer credentials are parsed
-    if (currentUser.role === "customer") {
-      return responseUtils.forbidden(response);
-    }
-    return responseUtils.sendJson(response, getAllUsers());
+
+    getCurrentUser(request).then((currentUser) => {
+      if (currentUser === null) {
+        // response with basic auth challenge if credentials are incorrect (no user found)
+        return responseUtils.basicAuthChallenge(response);
+      }
+      // response with basic auth challenge if customer credentials are parsed
+      if (currentUser.role === "customer") {
+        return responseUtils.forbidden(response);
+      }
+      if (currentUser.role === "admin") {
+        // respond with json when admin credentials are received
+        return responseUtils.sendJson(response, users);
+      }
+    });
+    
   }
 
   // register new user
@@ -225,13 +235,23 @@ const handleRequest = async (request, response) => {
     if (errors.length) {
       return responseUtils.badRequest(response, errors);
     }
-    if (emailInUse(userAsJson.email)) {
+    if (user) {
       return responseUtils.badRequest(response, "Email already in use!");
     }
-
-    const newUser = new User(userAsJson);
-    newUser.role = "customer";
+    // Create a new user
+    const userData = {
+      name: userAsJson.name,
+      email: userAsJson.email,
+      password: userAsJson.password,
+      role: "customer",
+    }; 
+    const newUser = new User(userData);
     await newUser.save();
+    const newId = newUser._id;
+
+    const newlyAddedUser = await User.findOne({ _id: newId }).exec();
+    newlyAddedUser.role = "customer";
+    await newlyAddedUser.save();
     return responseUtils.createdResource(response, newUser);
   }
 
@@ -239,6 +259,7 @@ const handleRequest = async (request, response) => {
     /**
      * AUTHORIZATION: Chech the authorization header of the request and response accordingly
      */
+  
     const authorizationHeader = headers["authorization"];
     // Response with basic auth challenge if auth header is missing/empty
     if (!authorizationHeader) return responseUtils.basicAuthChallenge(response);
@@ -251,10 +272,9 @@ const handleRequest = async (request, response) => {
       return responseUtils.basicAuthChallenge(response);
     }
     // If all is good, attempt to get the current user
-    const currentUser = await authUtils
-      .getCurrentUser(request)
-      .then((user) => user);
-    if (currentUser === undefined) {
+    const currentUser = await getCurrentUser(request);
+    
+    if (currentUser === null) {
       // Response with basic auth challenge if credentials are incorrect (no user found)
       return responseUtils.basicAuthChallenge(response);
     }
