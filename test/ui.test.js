@@ -22,7 +22,10 @@ const generateRandomString = (len = 9) => {
 const shortWaitTime = 200;
 
 // Get users (create copies for test isolation)
-const users = require('../setup/users.json').map(user => ({ ...user }));
+const users = require('../users.json').map(user => {
+  const { name, email, password, role } = { ...user };
+  return { name, email, password, role };
+});
 
 const adminUser = { ...users.find(u => u.role === 'admin') };
 const customerUser = { ...users.find(u => u.role === 'customer') };
@@ -125,7 +128,7 @@ describe('User Inteface', () => {
       const errorMsg =
         'Navigated to "/register.html" and tried to register following user: ' +
         `{ name: ${newCustomer.name}, email: ${newCustomer.email}, password: ${newCustomer.password} } ` +
-        `and then navigated to ${usersPage} and expected to find a new user (h3 with text content of ${newCustomer.name}) ` +
+        `and then navigated to ${usersPage} and expected to find a new user (h3 with text content of ${newCustomer.name})` +
         'however it could not be found.';
 
       await page.goto(registrationPage, { waitUntil: 'networkidle0' });
@@ -415,7 +418,7 @@ describe('User Inteface', () => {
       );
 
       errorMsg =
-        'Tried to increase amount of ' +
+        'Tried to increase amount of' +
         `"${product.name}". ` +
         'Expected amount text: "2x" ' +
         `but found this instead: "${newAmountText}"`;
@@ -453,7 +456,7 @@ describe('User Inteface', () => {
       );
 
       errorMsg =
-        'Tried to decrease amount of ' +
+        'Tried to decrease amount of' +
         `"${product.name}". ` +
         'Expected to amount text: "1x" ' +
         `but found this instead: "${newAmountText}"`;
@@ -490,7 +493,7 @@ describe('User Inteface', () => {
       await page.waitForTimeout(shortWaitTime);
 
       errorMsg =
-        'Tried to decrease amount of ' +
+        'Tried to decrease amount of' +
         `"${product.name}" to 0. ` +
         'Expected it to be removed from the cart but cart was not empty';
 

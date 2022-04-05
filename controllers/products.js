@@ -34,9 +34,6 @@ module.exports = {
 			if (currentUser === null) {
 			return responseUtils.basicAuthChallenge(response);
 			}
-
-
-			// const getAllProducts = () =>
 			const __data = productData.products.map((product) => ({ ...product }));
 			return responseUtils.sendJson(response, __data);
 
@@ -48,3 +45,4 @@ module.exports = {
 	}
 
 }
+
