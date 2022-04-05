@@ -3,6 +3,8 @@ const expect = chai.expect;
 const { createResponse } = require('node-mocks-http');
 const { getAllProducts } = require('../../controllers/products');
 
+console.log('_______________ 6');
+
 // Get products (create copies for test isolation)
 const products = require('../../products.json').map(product => ({ ...product }));
 
