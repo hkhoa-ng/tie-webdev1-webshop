@@ -33,10 +33,18 @@ const placeOrder = async() => {
   // for each of the products in the cart remove them, /public/js/utils.js provides removeElement(containerId, elementId)
   const allProducts = getAllProductsFromCart();
   createNotification("Successfully created an order!", "notifications-container");
-  for (const product of allProducts) {
+  
+ // for (const product of allProducts) {
+  //   let {name:id} = product;
+  //   removeElement('cart-container', id);
+  // }
+
+  allProducts.map((product) => {
     let {name:id} = product;
     removeElement('cart-container', id);
-  }
+
+  })
+ 
   clearCart();
 };
 
@@ -73,8 +81,7 @@ const placeOrder = async() => {
 
   document.querySelector('#place-order-button').addEventListener('click', () => placeOrder());
 
-
-  for (const product of productsFromCart) {
+  productsFromCart.map((product) =>  {
     let {name:id, amount} = product;
     if (amount === "NaN") amount = 0;
     const productInfo = products.find(product => product._id == id);
@@ -97,5 +104,9 @@ const placeOrder = async() => {
         buttons.item(1).addEventListener('click', () => decreaseCount(id));
 
         cartContainer.appendChild(clone);
-  };
+
+  })
+  // for (const product of productsFromCart) {
+    
+  // };
 })();
