@@ -5,6 +5,9 @@ const chaiHttp = require('chai-http');
 
 describe('Test Product', () => {
 
+
+        console.log('_________________ isssue.test.js');
+
       it('Product should be an object', async () => {
           throw "error";
         

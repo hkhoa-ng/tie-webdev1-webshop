@@ -37,10 +37,7 @@ module.exports = {
 
 
 			// const getAllProducts = () =>
-			productData.products.map((product) => ({ ...product }));
-			const __data = productData.products;
-			// return responseUtils.sendJson(__data, getAllProducts());
-
+			const __data = productData.products.map((product) => ({ ...product }));
 			return responseUtils.sendJson(response, __data);
 
 
