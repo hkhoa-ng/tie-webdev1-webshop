@@ -30,7 +30,10 @@ const generateRandomString = (len = 9) => {
 const products = require('../products.json').map(product => ({ ...product }));
 
 // Get users (create copies for test isolation)
-const users = require('../setup/users.json').map(user => ({ ...user }));
+const users = require('../users.json').map(user => {
+  const { name, email, password, role } = { ...user };
+  return { name, email, password, role };
+});
 
 const adminUser = { ...users.find(u => u.role === 'admin') };
 const customerUser = { ...users.find(u => u.role === 'customer') };
@@ -368,6 +371,7 @@ describe('Routes', () => {
           .set('Accept', contentType)
           .set('Authorization', `Basic ${adminCredentials}`);
 
+
         expect(response).to.have.status(200);
         expect(response).to.be.json;
         expect(response.body).to.be.an('object');
@@ -473,7 +477,7 @@ describe('Routes', () => {
         expect(response.body.role).to.equal('customer');
       });
 
-      it('should respond with "400 Bad Request" when role is missing', async () => {
+      it('should respond with 400 when role is missing', async () => {
         const userWithExtra = {
           _id: generateRandomString(),
           ...getTestUser()
@@ -489,7 +493,7 @@ describe('Routes', () => {
         expect(response).to.have.status(400);
       });
 
-      it('should respond with "400 Bad Request" when role is not valid', async () => {
+      it('should respond with 400 when role is not valid', async () => {
         const response = await chai
           .request(handleRequest)
           .put(url)
