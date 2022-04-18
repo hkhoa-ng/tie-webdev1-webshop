@@ -1,6 +1,10 @@
 const chai = require('chai');
 const { createRequest } = require('node-mocks-http');
-const { acceptsJson, getCredentials, isJson } = require('../../utils/requestUtils');
+const {
+  acceptsJson,
+  getCredentials,
+  isJson
+} = require('../../../utils/requestUtils');
 const expect = chai.expect;
 
 // helper function for authorization headers
@@ -10,7 +14,7 @@ const encodeCredentials = (username, password) =>
 const getRequest = headers => createRequest({ headers });
 
 // Get users (create copies for test isolation)
-const users = require('../../setup/users.json').map(user => ({ ...user }));
+const users = require('../../../users.json').map(user => ({ ...user }));
 const adminUser = { ...users.find(u => u.role === 'admin') };
 const adminCredentials = encodeCredentials(adminUser.email, adminUser.password);
 
@@ -36,7 +40,10 @@ describe('Request Utils', () => {
       const headers = getHeaders();
       headers.accept = headers.accept
         .split(',')
-        .filter(header => !header.includes('application/json') && !header.includes('*/*'))
+        .filter(
+          header =>
+            !header.includes('application/json') && !header.includes('*/*')
+        )
         .join(',');
 
       expect(acceptsJson(getRequest(headers))).to.be.false;

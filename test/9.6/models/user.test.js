@@ -1,14 +1,17 @@
 const chai = require('chai');
 const expect = chai.expect;
 
-const User = require('../../models/user');
+const User = require('../../../models/user');
 
 // helper function for creating randomized test data
 const generateRandomString = (len = 9) => {
   let str = '';
 
   do {
-    str += Math.random().toString(36).substr(2, 9).trim();
+    str += Math.random()
+      .toString(36)
+      .substr(2, 9)
+      .trim();
   } while (str.length < len);
 
   return str.substr(0, len);
@@ -162,9 +165,9 @@ describe('User Model', () => {
     });
 
     it('must allow any known "role"', () => {
-      const data = getTestData();
+      const data = getTestData()
 
-      ['admin', 'customer'].forEach(role => {
+      ;['admin', 'customer'].forEach(role => {
         data.role = role;
         const user = new User(data);
         const error = user.validateSync();
