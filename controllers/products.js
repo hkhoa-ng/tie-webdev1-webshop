@@ -1,5 +1,5 @@
 const UserModel = require("../models/user.js");
-const responseUtils = require("../utils/responseUtils");
+const { sendJson } = require("../utils/responseUtils");
 const { getCurrentUser } = require("../auth/auth.js");
 
 const {
@@ -19,22 +19,22 @@ module.exports = {
     try {
       const { url, method, headers } = request;
 
-      const authorizationHeader = headers["authorization"];
-      if (!authorizationHeader)
-        return responseUtils.basicAuthChallenge(response);
-      const credentials = authorizationHeader.split(" ")[1];
-      const base64regex =
-        /^([0-9a-zA-Z+/]{4})*(([0-9a-zA-Z+/]{2}==)|([0-9a-zA-Z+/]{3}=))?$/;
-      if (!base64regex.test(credentials)) {
-        return responseUtils.basicAuthChallenge(response);
-      }
-      const currentUser = await getCurrentUser(request);
+      // const authorizationHeader = headers["authorization"];
+      // if (authorizationHeader === undefined || authorizationHeader === " ") return responseUtils.basicAuthChallenge(response);
+      // const credentials = authorizationHeader.split(" ")[1];
+      // const base64regex =
+      //   /^([0-9a-zA-Z+/]{4})*(([0-9a-zA-Z+/]{2}==)|([0-9a-zA-Z+/]{3}=))?$/;
+      // if (!base64regex.test(credentials)) {
+      //   return responseUtils.basicAuthChallenge(response);
+      // }
+      // const currentUser = await getCurrentUser(request);
 
-      if (currentUser === null) {
-        return responseUtils.basicAuthChallenge(response);
-      }
-      const __data = productData.products.map((product) => ({ ...product }));
-      return responseUtils.sendJson(response, __data);
+      // if (currentUser === null) {
+      //   return responseUtils.basicAuthChallenge(response);
+      // }
+
+      const products = productData.products.map((product) => ({ ...product }));
+      return sendJson(response, products);
     } catch (err) {}
   },
 };

@@ -26,22 +26,29 @@ const User = require("../models/user");
  * @returns {Object|null} current authenticated user or null if not yet authenticated
  */
 const getCurrentUser = async (request) => {
-  // DONE: 8.5 Implement getting current user based on the "Authorization" request header
+  // Check for Authorization header
+  const authHeader = request.headers['authorization'];
+  // Return null if Authorization header is missing/empty, or if Authorization type is not "Basic"
+  if (authHeader === undefined || authHeader === "") {
+    return null;
+  }
+  // Return null if Authorization header is not Basic
+  const authType = authHeader.split(" ")[0];
+  if (authType !== "Basic") {
+    return null;
+  }
   const credentials = getCredentials(request);
   const userEmail = credentials[0];
   const userPassword = credentials[1];
   if (credentials.length === 0) {
-    console.log("No credentials!");
     return null;
   }
   // const currentUser = await getUser(credentials[0], credentials[1]);
   const currentUser = await User.findOne({ email: userEmail }).exec();
   if (currentUser === null) {
-    console.log("Found no user with given email!");
     return null;
   }
   const isPasswordCorrect = await currentUser.checkPassword(userPassword);
-  // isPasswordCorrect ? "await currentUser" : "null";
   if (!isPasswordCorrect) {
     return null;
   }

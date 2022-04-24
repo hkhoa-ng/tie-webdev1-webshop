@@ -1,11 +1,19 @@
+const { sendJson } = require("../utils/responseUtils");
+const userData = {
+  users: require("../users.json").map((user) => ({ ...user })),
+};
 /**
  * Send all users as JSON
  *
  * @param {http.ServerResponse} response
  */
 const getAllUsers = async response => {
-  // TODO: 10.2 Implement this
-  throw new Error('Not Implemented');
+  try {
+    const users = userData.users.map((user) => ({ ...user }));
+    return sendJson(response, users);
+  } catch (err) {
+    console.log(err);
+  }
 };
 
 /**
