@@ -119,8 +119,6 @@ const registerUser = async(response, userData) => {
   const user = await User.findOne({ email: userData.email }).exec();
   const errors = validateUser(userData);
 
-  console.log(errors);
-
   if (errors.length > 0) {
     return responseUtils.badRequest(response, "Bad Request");
   }

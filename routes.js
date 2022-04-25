@@ -30,6 +30,7 @@ const User = require("./models/user");
 
 const UserController = require("./controllers/users.js");
 const ProductController = require("./controllers/products.js");
+const Product = require("./models/product");
 
 /**
  * Known API routes and their allowed methods
@@ -40,11 +41,8 @@ const ProductController = require("./controllers/products.js");
 const allowedMethods = {
   "/api/register": ["POST"],
   "/api/users": ["GET"],
-  "/api/products": ["GET"],
-  "/api/products": ["PUT"],
-  "/api/products": ["POST"],
-  "/api/orders": ["POST"],
-  "/api/orders": ["GET"],
+  "/api/products": ["GET", "PUT", "POST"],
+  "/api/orders": ["POST", "GET"]
 };
 /**
  * Read the products data in JSON
@@ -197,22 +195,15 @@ const handleRequest = async (request, response) => {
       return responseUtils.forbidden(response);
     }
     if (method.toUpperCase() === "GET") {
-      console.log("GET a user with ID");
-      console.log(currentUser["role"]);
-      console.log(typeof(currentUser["id"]) + ": " + currentUser["id"]);
-      console.log(typeof(urlId) + ": " + urlId);
-      console.log(currentUser["_id"] !== urlId);
-
-
-      if (currentUser["role"] === "admin") {
-        return responseUtils.sendJson(response, currentUser);
-      }
-      // if (currentUser["_id"] !== urlId) {
-      //   return responseUtils.notFound(response);
-      // }
-      if (User.findById(urlId) === null) {
+      const loginUser = await getCurrentUser(request);
+      const userToGet = await User.findById(urlId).exec();
+      if (userToGet === null) {
         return responseUtils.notFound(response);
       }
+      if (loginUser["role"] === "admin") {
+        return responseUtils.sendJson(response, userToGet);
+      }
+      console.log(urlId);
     }
     if (method.toUpperCase() === "DELETE" && currentUser.role === "admin") {
       // Find user to be deleted with ID, and then delete and return that user
@@ -230,14 +221,11 @@ const handleRequest = async (request, response) => {
     if (method.toUpperCase() === "PUT") {
       const roleToChange = userChangeRole.role;
 
-      // if (!roles.includes(roleToChange)) {
-      //   return responseUtils.badRequest(response);
-      // }
       if ( !roles.includes(roleToChange) || roleToChange === undefined) {
         return responseUtils.badRequest(response, "Bad Request");
       }
 
-      if (currentUser.role === "admin") {
+      if (currentUser['role'] === "admin") {
         // Only update user role if role = admin
         const userToChange = await User.findById(uid).exec();
         if (userToChange === null) return responseUtils.notFound(response);
@@ -274,10 +262,14 @@ const handleRequest = async (request, response) => {
     const productRequestBody = await parseBodyJson(request);
     const {name, price, image, description} = productRequestBody;
 
-    // console.log(name + "/ " + price + "/ " + image + "/ " + description);
+    console.log(name + "/ " + price + "/ " + image + "/ " + description);
 
     if (method.toUpperCase() === "GET") {
-
+      const productToGet = await Product.findById(urlId).exec();
+      if (productToGet === null) {
+        return responseUtils.notFound(response);
+      }
+      return responseUtils.sendJson(response, productToGet);
     }
 
     if (method.toUpperCase() === "PUT") {
@@ -292,6 +284,25 @@ const handleRequest = async (request, response) => {
 
       if (isNaN(price) || price === 0 || price <= 0) {
         return responseUtils.badRequest(response, "Bad Request");
+      }
+
+      if (currentUser['role'] === "admin") {
+        let productToUpdate = await Product.findById(urlId);
+        console.log(productToUpdate);
+      }
+    }
+
+    if (method.toUpperCase() === "DELETE") {
+      if (currentUser['role'] === "customer") {
+        console.log("Current user is customer. Cannot delete product.");
+        return responseUtils.forbidden(response);
+      }
+      if (currentUser['role'] === "admin") {
+        console.log("Current user is admin. Deleting.");
+        const productToDelete = await Product.findById(urlId); 
+        console.log("Product to delete: " + productToDelete);
+        await User.deleteOne({ _id: urlId });
+        return responseUtils.sendJson(response, productToDelete); 
       }
     }
   }
@@ -320,11 +331,6 @@ const handleRequest = async (request, response) => {
     }
   }
 
-
-  // Default to 404 Not Found if unknown url
-  console.log("File path is: " + filePath);
-  console.log("Method is: " + method);
-  console.log("===========================")
   if (!(filePath in allowedMethods)) {
     return responseUtils.notFound(response);
   }
@@ -345,7 +351,7 @@ const handleRequest = async (request, response) => {
   }
 
   if (filePath === "/api/products" && method.toUpperCase() === "GET") {
-    console.log("/api/products");
+    // console.log("/api/products");
     const { headers } = request;
     const authorizationHeader = headers["authorization"];
     const currentUser = await getCurrentUser(request);
@@ -368,7 +374,6 @@ const handleRequest = async (request, response) => {
       return responseUtils.contentTypeNotAcceptable(response);
     }
 
-    console.log("GET /api/products");
   
     // check if the auth header is properly encoded
     const credentials = authorizationHeader.split(" ")[1];
@@ -384,6 +389,25 @@ const handleRequest = async (request, response) => {
 
     }
   
+  }
+
+  if (filePath === "/api/products" && method.toUpperCase() === "POST") {
+    const { headers } = request;
+    const authorizationHeader = headers["authorization"];
+    const currentUser = await getCurrentUser(request);
+    // response with basic auth challenge & 401 Unauthorized if auth header is missing
+    if (!authorizationHeader) {
+      response.setHeader("WWW-Authenticate", "Basic");
+      return responseUtils.unauthorized(response);
+    }
+    if (authorizationHeader === undefined || authorizationHeader === " ") {
+      // response with basic auth challenge if auth header is missing/empty
+      return responseUtils.basicAuthChallenge(response);
+    }
+    // response with basic auth challenge if credentials are incorrect
+    if (currentUser === null) {
+      return responseUtils.basicAuthChallenge(response);
+    }
   }
 
   // GET all users
@@ -458,8 +482,40 @@ const handleRequest = async (request, response) => {
     return responseUtils.createdResource(response, newUser);
   }
 
-  if (filePath === "/api/orders") {
+  if (filePath === "/api/orders" && method.toUpperCase() === "POST") {
+    const { headers } = request;
+    const authorizationHeader = headers["authorization"];
+    const currentUser = await getCurrentUser(request);
+    // response with basic auth challenge & 401 Unauthorized if auth header is missing
+    if (!authorizationHeader) {
+      response.setHeader("WWW-Authenticate", "Basic");
+      return responseUtils.unauthorized(response);
+    }
+    if (authorizationHeader === undefined || authorizationHeader === " ") {
+      // response with basic auth challenge if auth header is missing/empty
+      return responseUtils.basicAuthChallenge(response);
+    }
+    // response with basic auth challenge if credentials are incorrect
+    if (currentUser === null) {
+      return responseUtils.basicAuthChallenge(response);
+    }
+  }
 
+  if (filePath === "/api/orders" && method.toUpperCase() === "GET") {
+    const authorizationHeader = headers["authorization"];
+    if (!authorizationHeader) {
+      // response with basic auth challenge if auth header is missing/empty
+      return responseUtils.basicAuthChallenge(response);
+    }
+
+    // check if the header is properly encoded
+    const credentials = authorizationHeader.split(" ")[1];
+    const base64regex =
+      /^([0-9a-zA-Z+/]{4})*(([0-9a-zA-Z+/]{2}==)|([0-9a-zA-Z+/]{3}=))?$/;
+    if (!base64regex.test(credentials)) {
+      // response with basic auth challenge if auth header is not properly encoded
+      return responseUtils.basicAuthChallenge(response);
+    }
   }
 };
 
