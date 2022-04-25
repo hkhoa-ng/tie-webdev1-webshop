@@ -105,6 +105,12 @@ const matchProductId = (url) => {
   return matchIdRoute(url, "products");
 }
 
+/**
+ * Does the URL match /api/orders/{id}
+ * 
+ * @param {string} url filePath
+ * @returns {boolean}
+ */
 const matchOrderId = (url) => {
   return matchIdRoute(url, "orders");
 }
@@ -207,11 +213,11 @@ const handleRequest = async (request, response) => {
     }
     if (method.toUpperCase() === "DELETE" && currentUser.role === "admin") {
       // Find user to be deleted with ID, and then delete and return that user
-      const userToBeDeleted = await User.findById(uid).exec();
+      const userToBeDeleted = await User.findById(urlId).exec();
       if (userToBeDeleted === null) {
         return responseUtils.notFound(response);
       }
-      await User.deleteOne({ _id: uid });
+      await User.deleteOne({ _id: urlId });
       return responseUtils.sendJson(response, userToBeDeleted);
     }
     const userChangeRole = await parseBodyJson(request);
@@ -227,8 +233,10 @@ const handleRequest = async (request, response) => {
 
       if (currentUser['role'] === "admin") {
         // Only update user role if role = admin
-        const userToChange = await User.findById(uid).exec();
-        if (userToChange === null) return responseUtils.notFound(response);
+        const userToChange = await User.findById(urlId).exec();
+        if (userToChange === null) {
+          return responseUtils.notFound(response);
+        }
         userToChange.role = roleToChange;
         await userToChange.save();
         return responseUtils.sendJson(response, userToChange);
@@ -258,12 +266,9 @@ const handleRequest = async (request, response) => {
     if (acceptHeader === undefined || !acceptHeader.split("/").includes("json")) {
       return responseUtils.contentTypeNotAcceptable(response);
     }
-
-    const productRequestBody = await parseBodyJson(request);
-    const {name, price, image, description} = productRequestBody;
-
-    console.log(name + "/ " + price + "/ " + image + "/ " + description);
-
+    
+    // console.log(name + "/ " + price + "/ " + image + "/ " + description);
+    
     if (method.toUpperCase() === "GET") {
       const productToGet = await Product.findById(urlId).exec();
       if (productToGet === null) {
@@ -274,21 +279,33 @@ const handleRequest = async (request, response) => {
 
     if (method.toUpperCase() === "PUT") {
       // console.log("PUT products");
-      if (currentUser.role === "customer") {
-        return responseUtils.badRequest(response, "Bad Request");
+      const productRequestBody = await parseBodyJson(request);
+      const {name, price, image, description} = productRequestBody;
+
+      if (currentUser['role'] === "customer") {
+        return responseUtils.forbidden(response);
       }
 
       if (name === ' ') {
         return responseUtils.badRequest(response, "Bad Request");
       }
-
+      
       if (isNaN(price) || price === 0 || price <= 0) {
         return responseUtils.badRequest(response, "Bad Request");
       }
 
       if (currentUser['role'] === "admin") {
+        console.log(name + "/ " + price + "/ " + image + "/ " + description);
         let productToUpdate = await Product.findById(urlId);
-        console.log(productToUpdate);
+        productToUpdate['name'] = name;
+        productToUpdate['price'] = price;
+        if (image !== undefined) {
+          productToUpdate['image'] = image;
+        }
+        if (description !== undefined) {
+          productToUpdate['description'] = description;
+        }
+        productToUpdate.save();
       }
     }
 
@@ -408,6 +425,18 @@ const handleRequest = async (request, response) => {
     if (currentUser === null) {
       return responseUtils.basicAuthChallenge(response);
     }
+    if (currentUser['role'] === "customer") {
+      return responseUtils.forbidden(response);
+    }
+    const requestBody = await parseBodyJson(request);
+    if (!isJson(requestBody)) {
+      return responseUtils.badRequest(response, "Bad Request");
+    }
+    const { name, price } = requestBody;
+    if (name === undefined || price === undefined) {
+      return responseUtils.badRequest(response, "Bad Request");
+    }
+    
   }
 
   // GET all users
