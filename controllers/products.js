@@ -1,5 +1,5 @@
 const UserModel = require("../models/user.js");
-const { sendJson } = require("../utils/responseUtils");
+const responseUtils = require("../utils/responseUtils");
 const { getCurrentUser } = require("../auth/auth.js");
 
 const {
@@ -10,9 +10,11 @@ const {
 } = require("../utils/requestUtils");
 const { renderPublic } = require("../utils/render");
 
-const productData = {
-  products: require("../products.json").map((product) => ({ ...product })),
-};
+// const productData = {
+//   products: require("../products.json").map((product) => ({ ...product })),
+// };
+
+const Product = require("../models/product");
 
 module.exports = {
   getAllProducts: async (request, response) => {
@@ -33,8 +35,26 @@ module.exports = {
       //   return responseUtils.basicAuthChallenge(response);
       // }
 
-      const products = productData.products.map((product) => ({ ...product }));
-      return sendJson(response, products);
+      // const products = productData.products.map((product) => ({ ...product }));
+      const products = await Product.find({});
+      const result = products.map(product => (
+        {
+          _id: product['_id'],
+          name: product['name'],
+          price: product['price'],
+          image: product['image'],
+          description: product['description']
+        }
+      ))
+      // result.map((product) => {
+      //   console.log("Actual: " + product['_id']);
+      //   console.log(product['name']);
+      //   console.log(product['price']);
+      //   console.log(product['image']);
+      //   console.log(product['description']);
+      //   console.log("==============");
+      // })
+      return responseUtils.sendJson(response, result, 200);
     } catch (err) {}
   },
 };

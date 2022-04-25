@@ -1,16 +1,46 @@
-const { sendJson } = require("../utils/responseUtils");
-const userData = {
-  users: require("../users.json").map((user) => ({ ...user })),
+const responseUtils = require("../utils/responseUtils");
+// const usersJson = {
+//   users: require("../users.json").map((user) => ({ ...user })),
+// };
+const User = require("../models/user");
+const roles = ["customer", "admin"];
+
+const validateEmail = (email) => {
+  return String(email)
+    .toLowerCase()
+    .match(
+      /^(([^<>()[\]\\.,;:\s@"]+(\.[^<>()[\]\\.,;:\s@"]+)*)|(".+"))@((\[[0-9]{1,3}\.[0-9]{1,3}\.[0-9]{1,3}\.[0-9]{1,3}\])|(([a-zA-Z\-0-9]+\.)+[a-zA-Z]{2,}))$/
+    );
 };
+
+
+const validateUser = (user) => {
+  const pwdRegex = /[a-z0-9!#$%&'*+/=?^_`{|}~-]+(?:\.[a-z0-9!#$%&'*+/=?^_`{|}~-]+)*@(?:[a-z0-9](?:[a-z0-9-]*[a-z0-9])?\.)+[a-z0-9](?:[a-z0-9-]*[a-z0-9])?/;
+  const errors = [];
+
+  
+  if (!validateEmail(user['email'])) errors.push("Invalid email");
+  if (user.email === undefined) errors.push("Missing email");
+  if (user.name === undefined) errors.push("Missing name");
+  if (user['password'] === undefined) {
+    errors.push("Missing password");
+  }
+  if (String(user.password).length < 10) errors.push("Password too short");
+
+  return errors;
+};
+
 /**
  * Send all users as JSON
  *
  * @param {http.ServerResponse} response
  */
 const getAllUsers = async response => {
+  const allUsers = await User.find({});
+
   try {
-    const users = userData.users.map((user) => ({ ...user }));
-    return sendJson(response, users);
+    // const users = userData.users.map((user) => ({ ...user }));
+    return responseUtils.sendJson(response, allUsers);
   } catch (err) {
     console.log(err);
   }
@@ -25,7 +55,15 @@ const getAllUsers = async response => {
  */
 const deleteUser = async(response, userId, currentUser) => {
   // TODO: 10.2 Implement this
-  throw new Error('Not Implemented');
+  const userToDelete = await User.findById(userId).exec();
+  if (userToDelete === null) {
+    return responseUtils.notFound(response);
+  }
+  if (String(userId) === String(currentUser['_id'])) {
+    return responseUtils.badRequest(response, "Bad Request");
+  }
+  await User.deleteOne({ _id: userId }).exec();
+  return responseUtils.sendJson(response, userToDelete);
 };
 
 /**
@@ -37,8 +75,22 @@ const deleteUser = async(response, userId, currentUser) => {
  * @param {Object} userData JSON data from request body
  */
 const updateUser = async(response, userId, currentUser, userData) => {
-  // TODO: 10.2 Implement this
-  throw new Error('Not Implemented');
+  const userToUpdate = await User.findById(userId);
+  if (userToUpdate === null) {
+    return responseUtils.notFound(response);
+  }
+  if (String(userId) === String(currentUser['_id'])) {
+    return responseUtils.badRequest(response, "Updating own data is not allowed");
+  }
+  if (userData['role'] === undefined) {
+    return responseUtils.badRequest(response, "Bad Request");
+  }
+  if (!roles.includes(userData['role'])) {
+    return responseUtils.badRequest(response, "Bad Request");
+  }
+  userToUpdate['role'] = userData['role'];
+  await userToUpdate.save();
+  return responseUtils.sendJson(response, userToUpdate); 
 };
 
 /**
@@ -50,7 +102,11 @@ const updateUser = async(response, userId, currentUser, userData) => {
  */
 const viewUser = async(response, userId, currentUser) => {
   // TODO: 10.2 Implement this
-  throw new Error('Not Implemented');
+  const userToFind = await User.findById(userId).exec();
+  if (userToFind === null) {
+    return responseUtils.notFound(response);
+  }
+  return responseUtils.sendJson(response, userToFind);
 };
 
 /**
@@ -60,8 +116,34 @@ const viewUser = async(response, userId, currentUser) => {
  * @param {Object} userData JSON data from request body
  */
 const registerUser = async(response, userData) => {
-  // TODO: 10.2 Implement this
-  throw new Error('Not Implemented');
+  const user = await User.findOne({ email: userData.email }).exec();
+  const errors = validateUser(userData);
+
+  console.log(errors);
+
+  if (errors.length > 0) {
+    return responseUtils.badRequest(response, "Bad Request");
+  }
+  if (user !== null) {
+    return responseUtils.badRequest(response, "Bad Request");
+  }
+  // // Create a new user
+  // const userData = {
+  //   name: userData.name,
+  //   email: userData.email,
+  //   password: userData.password,
+  //   role: "customer",
+  // }; 
+  const newUser = new User(userData);
+  newUser['role'] = "customer";
+  await newUser.save();
+  // const newId = newUser._id;
+
+  // const newlyAddedUser = await User.findOne({ _id: newId }).exec();
+  // newlyAddedUser.role = "customer";
+  // await newlyAddedUser.save();
+
+  return responseUtils.createdResource(response, newUser);
 };
 
 module.exports = { getAllUsers, registerUser, deleteUser, viewUser, updateUser };

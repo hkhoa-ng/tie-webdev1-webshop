@@ -150,13 +150,13 @@ const handleRequest = async (request, response) => {
 
   const { url, method, headers } = request;
   const filePath = new URL(url, `http://${headers.host}`).pathname;
+  const urlId = filePath.split("/")[3];
 
   // console.log(request);
 
   // serve static files from public/ and return immediately
   if (method.toUpperCase() === "GET" && !filePath.startsWith("/api")) {
-    const fileName =
-      filePath === "/" || filePath === "" ? "index.html" : filePath;
+    const fileName = filePath === "/" || filePath === "" ? "index.html" : filePath;
     return renderPublic(fileName, response);
   }
 
@@ -188,18 +188,31 @@ const handleRequest = async (request, response) => {
       // response with basic auth challenge if credentials are incorrect
       return responseUtils.basicAuthChallenge(response);
     }
-    const uid = filePath.split("/")[3];
-    if (User.findById(uid).exec() === null) {
-      return responseUtils.notFound(response);
-    }
+    // const uid = filePath.split("/")[3];
+    // if (User.findById(uid).exec() === null) {
+    //   return responseUtils.notFound(response);
+    // }
     // response with basic auth challenge if customer credentials are parse
     if (currentUser.role === "customer") {
       return responseUtils.forbidden(response);
     }
     if (method.toUpperCase() === "GET") {
-      console.log(currentUser);
-      if (currentUser.role === "admin") return responseUtils.sendJson(response, currentUser);
-      if (currentUser === null) return responseUtils.notFound(response);
+      console.log("GET a user with ID");
+      console.log(currentUser["role"]);
+      console.log(typeof(currentUser["id"]) + ": " + currentUser["id"]);
+      console.log(typeof(urlId) + ": " + urlId);
+      console.log(currentUser["_id"] !== urlId);
+
+
+      if (currentUser["role"] === "admin") {
+        return responseUtils.sendJson(response, currentUser);
+      }
+      // if (currentUser["_id"] !== urlId) {
+      //   return responseUtils.notFound(response);
+      // }
+      if (User.findById(urlId) === null) {
+        return responseUtils.notFound(response);
+      }
     }
     if (method.toUpperCase() === "DELETE" && currentUser.role === "admin") {
       // Find user to be deleted with ID, and then delete and return that user
@@ -309,11 +322,17 @@ const handleRequest = async (request, response) => {
 
 
   // Default to 404 Not Found if unknown url
-  if (!(filePath in allowedMethods)) return responseUtils.notFound(response);
+  console.log("File path is: " + filePath);
+  console.log("Method is: " + method);
+  console.log("===========================")
+  if (!(filePath in allowedMethods)) {
+    return responseUtils.notFound(response);
+  }
 
   // See: http://restcookbook.com/HTTP%20Methods/options/
-  if (method.toUpperCase() === "OPTIONS")
+  if (method.toUpperCase() === "OPTIONS") {
     return sendOptions(filePath, response);
+  }
 
   // Check for allowable methods
   if (!allowedMethods[filePath].includes(method.toUpperCase())) {
@@ -323,6 +342,48 @@ const handleRequest = async (request, response) => {
   // Require a correct accept header (require 'application/json' or '*/*')
   if (!acceptsJson(request)) {
     return responseUtils.contentTypeNotAcceptable(response);
+  }
+
+  if (filePath === "/api/products" && method.toUpperCase() === "GET") {
+    console.log("/api/products");
+    const { headers } = request;
+    const authorizationHeader = headers["authorization"];
+    const currentUser = await getCurrentUser(request);
+    // response with basic auth challenge & 401 Unauthorized if auth header is missing
+    if (!authorizationHeader) {
+      response.setHeader("WWW-Authenticate", "Basic");
+      return responseUtils.unauthorized(response);
+    }
+    if (authorizationHeader === undefined || authorizationHeader === " ") {
+      // response with basic auth challenge if auth header is missing/empty
+      return responseUtils.basicAuthChallenge(response);
+    }
+    // response with basic auth challenge if credentials are incorrect
+    if (currentUser === null) {
+      return responseUtils.basicAuthChallenge(response);
+    }
+    // response with 406 not acceptable if Accept header not found/client doesn't accept json
+    const acceptHeader = headers['accept'];
+    if (acceptHeader === undefined || !acceptHeader.split("/").includes("json")) {
+      return responseUtils.contentTypeNotAcceptable(response);
+    }
+
+    console.log("GET /api/products");
+  
+    // check if the auth header is properly encoded
+    const credentials = authorizationHeader.split(" ")[1];
+    const base64regex = /^([0-9a-zA-Z+/]{4})*(([0-9a-zA-Z+/]{2}==)|([0-9a-zA-Z+/]{3}=))?$/;
+    // response with basic auth challenge if auth header is not properly encoded
+    if (!base64regex.test(credentials)) {
+      return responseUtils.basicAuthChallenge(response);
+    }
+    ProductController.getAllProducts(request, response)
+    
+
+    if (method.toUpperCase() === "POST") {
+
+    }
+  
   }
 
   // GET all users
@@ -395,48 +456,6 @@ const handleRequest = async (request, response) => {
     newlyAddedUser.role = "customer";
     await newlyAddedUser.save();
     return responseUtils.createdResource(response, newUser);
-  }
-
-  if (filePath === "/api/products" && method.toUpperCase() === "GET") {
-    console.log("/api/products");
-    const { headers } = request;
-    const authorizationHeader = headers["authorization"];
-    const currentUser = await getCurrentUser(request);
-    // response with basic auth challenge & 401 Unauthorized if auth header is missing
-    if (!authorizationHeader) {
-      response.setHeader("WWW-Authenticate", "Basic");
-      return responseUtils.unauthorized(response);
-    }
-    if (authorizationHeader === undefined || authorizationHeader === " ") {
-      // response with basic auth challenge if auth header is missing/empty
-      return responseUtils.basicAuthChallenge(response);
-    }
-    // response with basic auth challenge if credentials are incorrect
-    if (currentUser === null) {
-      return responseUtils.basicAuthChallenge(response);
-    }
-    // response with 406 not acceptable if Accept header not found/client doesn't accept json
-    const acceptHeader = headers['accept'];
-    if (acceptHeader === undefined || !acceptHeader.split("/").includes("json")) {
-      return responseUtils.contentTypeNotAcceptable(response);
-    }
-
-    console.log("GET /api/products");
-  
-    // check if the auth header is properly encoded
-    const credentials = authorizationHeader.split(" ")[1];
-    const base64regex = /^([0-9a-zA-Z+/]{4})*(([0-9a-zA-Z+/]{2}==)|([0-9a-zA-Z+/]{3}=))?$/;
-    // response with basic auth challenge if auth header is not properly encoded
-    if (!base64regex.test(credentials)) {
-      return responseUtils.basicAuthChallenge(response);
-    }
-    ProductController.getAllProducts(request, response)
-    
-
-    if (method.toUpperCase() === "POST") {
-
-    }
-  
   }
 
   if (filePath === "/api/orders") {
