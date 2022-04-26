@@ -12,11 +12,8 @@ const orderSchema = new Schema({
     type: Array,
     required: true,
   },
-  image: {
-    type: String,
-  },
-  description: {
-    type: String,
+  quantity: {
+    type: Number,
   }
 });
 

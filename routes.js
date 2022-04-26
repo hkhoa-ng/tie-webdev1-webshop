@@ -27,10 +27,12 @@ const validateUser = (user) => {
 
 // Require user model
 const User = require("./models/user");
+const Product = require("./models/product");
+const Order = require("./models/order");
 
 const UserController = require("./controllers/users.js");
 const ProductController = require("./controllers/products.js");
-const Product = require("./models/product");
+
 
 /**
  * Known API routes and their allowed methods
@@ -177,6 +179,7 @@ const handleRequest = async (request, response) => {
       // response with basic auth challenge if auth header is missing/empty
       return responseUtils.basicAuthChallenge(response);
     }
+
     // Response with 406 Not Acceptable when Accept header is missing/client doesn't accept JSON
     const acceptHeader = request.headers['accept'];
     if (acceptHeader === undefined || !acceptHeader.split("/").includes("json")) {
@@ -267,8 +270,6 @@ const handleRequest = async (request, response) => {
       return responseUtils.contentTypeNotAcceptable(response);
     }
     
-    // console.log(name + "/ " + price + "/ " + image + "/ " + description);
-    
     if (method.toUpperCase() === "GET") {
       const productToGet = await Product.findById(urlId).exec();
       if (productToGet === null) {
@@ -278,7 +279,6 @@ const handleRequest = async (request, response) => {
     }
 
     if (method.toUpperCase() === "PUT") {
-      // console.log("PUT products");
       const productRequestBody = await parseBodyJson(request);
       const {name, price, image, description} = productRequestBody;
 
@@ -295,8 +295,11 @@ const handleRequest = async (request, response) => {
       }
 
       if (currentUser['role'] === "admin") {
-        console.log(name + "/ " + price + "/ " + image + "/ " + description);
         let productToUpdate = await Product.findById(urlId);
+        
+        if (productToUpdate === null) {
+          return responseUtils.notFound(response);
+        }
         productToUpdate['name'] = name;
         productToUpdate['price'] = price;
         if (image !== undefined) {
@@ -306,19 +309,20 @@ const handleRequest = async (request, response) => {
           productToUpdate['description'] = description;
         }
         productToUpdate.save();
+        return responseUtils.sendJson(response, productToUpdate);
       }
     }
 
     if (method.toUpperCase() === "DELETE") {
       if (currentUser['role'] === "customer") {
-        console.log("Current user is customer. Cannot delete product.");
         return responseUtils.forbidden(response);
       }
       if (currentUser['role'] === "admin") {
-        console.log("Current user is admin. Deleting.");
         const productToDelete = await Product.findById(urlId); 
-        console.log("Product to delete: " + productToDelete);
-        await User.deleteOne({ _id: urlId });
+        if (productToDelete === null) {
+          return responseUtils.notFound(response);
+        }
+        await Product.deleteOne({ _id: urlId });
         return responseUtils.sendJson(response, productToDelete); 
       }
     }
@@ -329,10 +333,10 @@ const handleRequest = async (request, response) => {
     const authorizationHeader = headers["authorization"];
     const currentUser = await getCurrentUser(request);
     // response with basic auth challenge & 401 Unauthorized if auth header is missing
-    if (!authorizationHeader) {
-      response.setHeader("WWW-Authenticate", "Basic");
-      return responseUtils.unauthorized(response);
-    }
+    // if (!authorizationHeader) {
+    //   response.setHeader("WWW-Authenticate", "Basic");
+    //   return responseUtils.unauthorized(response);
+    // }
     if (authorizationHeader === undefined || authorizationHeader === " ") {
       // response with basic auth challenge if auth header is missing/empty
       return responseUtils.basicAuthChallenge(response);
@@ -345,6 +349,20 @@ const handleRequest = async (request, response) => {
     const acceptHeader = headers['accept'];
     if (acceptHeader === undefined || !acceptHeader.split("/").includes("json")) {
       return responseUtils.contentTypeNotAcceptable(response);
+    }
+
+    if (method.toUpperCase() === "GET") {
+      const orderToGet = await Order.findById(urlId);
+      if (orderToGet === null) {
+        return responseUtils.notFound(response);
+      }
+      if (currentUser['role'] === 'admin') {
+        return responseUtils.sendJson(response, orderToGet); 
+      }
+      if (String(orderToGet['customerId']) !== String(currentUser['_id'])) {
+        return responseUtils.notFound(response);
+      }
+      return responseUtils.sendJson(response, orderToGet); 
     }
   }
 
@@ -367,8 +385,8 @@ const handleRequest = async (request, response) => {
     return responseUtils.contentTypeNotAcceptable(response);
   }
 
+
   if (filePath === "/api/products" && method.toUpperCase() === "GET") {
-    // console.log("/api/products");
     const { headers } = request;
     const authorizationHeader = headers["authorization"];
     const currentUser = await getCurrentUser(request);
@@ -400,11 +418,6 @@ const handleRequest = async (request, response) => {
       return responseUtils.basicAuthChallenge(response);
     }
     ProductController.getAllProducts(request, response)
-    
-
-    if (method.toUpperCase() === "POST") {
-
-    }
   
   }
 
@@ -428,15 +441,24 @@ const handleRequest = async (request, response) => {
     if (currentUser['role'] === "customer") {
       return responseUtils.forbidden(response);
     }
+    if (!isJson(request)) {
+      return responseUtils.badRequest(response, "Bad Request");
+    }
     const requestBody = await parseBodyJson(request);
-    if (!isJson(requestBody)) {
+    if (requestBody.name === undefined || requestBody.price === undefined) {
       return responseUtils.badRequest(response, "Bad Request");
     }
-    const { name, price } = requestBody;
-    if (name === undefined || price === undefined) {
-      return responseUtils.badRequest(response, "Bad Request");
-    }
-    
+
+    // Create a new product
+    const productData = {
+      name: requestBody.name,
+      price: requestBody.price,
+      image: requestBody.image,
+      description: requestBody.description,
+    }; 
+    const newProduct = new Product(productData);
+    await newProduct.save();
+    return responseUtils.createdResource(response, newProduct);
   }
 
   // GET all users
@@ -516,9 +538,86 @@ const handleRequest = async (request, response) => {
     const authorizationHeader = headers["authorization"];
     const currentUser = await getCurrentUser(request);
     // response with basic auth challenge & 401 Unauthorized if auth header is missing
-    if (!authorizationHeader) {
-      response.setHeader("WWW-Authenticate", "Basic");
-      return responseUtils.unauthorized(response);
+    // if (!authorizationHeader) {
+    //   response.setHeader("WWW-Authenticate", "Basic");
+    //   return responseUtils.unauthorized(response);
+    // }
+    if (authorizationHeader === undefined || authorizationHeader === " ") {
+      // response with basic auth challenge if auth header is missing/empty
+      return responseUtils.basicAuthChallenge(response);
+    }
+    // response with basic auth challenge if credentials are incorrect
+    if (currentUser === null) {
+      return responseUtils.basicAuthChallenge(response);
+    }
+    // response with 406 not acceptable if Accept header not found/client doesn't accept json
+    const acceptHeader = headers['accept'];
+    if (acceptHeader === undefined || !acceptHeader.split("/").includes("json")) {
+      return responseUtils.contentTypeNotAcceptable(response);
+    }
+    if (!isJson(request)) {
+      return responseUtils.badRequest(response, "Bad Request");
+    }
+    if (currentUser['role'] === "admin") {
+      return responseUtils.forbidden(response);
+    }
+    
+    const requestBody = await parseBodyJson(request);
+    if (requestBody['items'].length === 0) {
+      console.log("Items is empty!");
+      return responseUtils.badRequest(response, "Bad Request"); 
+    }
+    const { items: orderItems } = requestBody;
+    const { product, quantity: productQuantity } = orderItems[0];
+    if (productQuantity === undefined) {
+      console.log("Missing quantity!");
+      return responseUtils.badRequest(response, "Bad Request"); 
+    }
+    if (product === undefined) {
+      console.log("Missing product!");
+      return responseUtils.badRequest(response, "Bad Request"); 
+    }
+    if (product['_id'] === undefined) {
+      console.log("Missing product ID!");
+      return responseUtils.badRequest(response, "Bad Request"); 
+    }
+    if (product['name'] === undefined) {
+      console.log("Missing product name!");
+      return responseUtils.badRequest(response, "Bad Request"); 
+    }
+    if (product['price'] === undefined) {
+      console.log("Missing price!");
+      return responseUtils.badRequest(response, "Bad Request"); 
+    }
+
+    const newOrderData = {
+      customerId: currentUser['_id'],
+      items: orderItems,
+      quantity: productQuantity,
+    }
+    console.log(2);
+    const newOrder = new Order(newOrderdata);
+    console.log(3);
+    console.log(newOrder);
+    console.log(4);
+    newOrder.save();
+    console.log(5);
+    return responseUtils.sendJson(response, newOrder)
+
+  }
+
+  if (filePath === "/api/orders" && method.toUpperCase() === "GET") {
+    const { headers } = request;
+    const authorizationHeader = headers["authorization"];
+    const acceptHeader = headers['accept'];
+    const currentUser = await getCurrentUser(request);
+    // response with basic auth challenge & 401 Unauthorized if auth header is missing
+    // if (!authorizationHeader) {
+    //   response.setHeader("WWW-Authenticate", "Basic");
+    //   return responseUtils.unauthorized(response);
+    // }
+    if (acceptHeader === undefined || !acceptHeader.split("/").includes("json")) {
+      return responseUtils.contentTypeNotAcceptable(response);
     }
     if (authorizationHeader === undefined || authorizationHeader === " ") {
       // response with basic auth challenge if auth header is missing/empty
@@ -528,23 +627,12 @@ const handleRequest = async (request, response) => {
     if (currentUser === null) {
       return responseUtils.basicAuthChallenge(response);
     }
-  }
-
-  if (filePath === "/api/orders" && method.toUpperCase() === "GET") {
-    const authorizationHeader = headers["authorization"];
-    if (!authorizationHeader) {
-      // response with basic auth challenge if auth header is missing/empty
-      return responseUtils.basicAuthChallenge(response);
+    if (currentUser['role'] === "admin") {
+      const adminOrders = await Order.find({});
+      return responseUtils.sendJson(response, adminOrders); 
     }
-
-    // check if the header is properly encoded
-    const credentials = authorizationHeader.split(" ")[1];
-    const base64regex =
-      /^([0-9a-zA-Z+/]{4})*(([0-9a-zA-Z+/]{2}==)|([0-9a-zA-Z+/]{3}=))?$/;
-    if (!base64regex.test(credentials)) {
-      // response with basic auth challenge if auth header is not properly encoded
-      return responseUtils.basicAuthChallenge(response);
-    }
+    const customerOrders = await Order.find({ customerId: currentUser['_id'] });
+    return responseUtils.sendJson(response, customerOrders);
   }
 };
 

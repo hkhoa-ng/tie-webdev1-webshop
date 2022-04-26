@@ -39,7 +39,6 @@ const getAllUsers = async response => {
   const allUsers = await User.find({});
 
   try {
-    // const users = userData.users.map((user) => ({ ...user }));
     return responseUtils.sendJson(response, allUsers);
   } catch (err) {
     console.log(err);
@@ -125,21 +124,9 @@ const registerUser = async(response, userData) => {
   if (user !== null) {
     return responseUtils.badRequest(response, "Bad Request");
   }
-  // // Create a new user
-  // const userData = {
-  //   name: userData.name,
-  //   email: userData.email,
-  //   password: userData.password,
-  //   role: "customer",
-  // }; 
   const newUser = new User(userData);
   newUser['role'] = "customer";
   await newUser.save();
-  // const newId = newUser._id;
-
-  // const newlyAddedUser = await User.findOne({ _id: newId }).exec();
-  // newlyAddedUser.role = "customer";
-  // await newlyAddedUser.save();
 
   return responseUtils.createdResource(response, newUser);
 };
