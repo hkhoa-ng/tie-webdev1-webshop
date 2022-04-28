@@ -363,6 +363,8 @@ const handleRequest = async (request, response) => {
       if (String(orderToGet['customerId']) !== String(currentUser['_id'])) {
         return responseUtils.notFound(response);
       }
+      console.log(orderToGet);
+      console.log(orderToGet.items[0].product);
       return responseUtils.sendJson(response, orderToGet); 
     }
   }
@@ -595,19 +597,33 @@ const handleRequest = async (request, response) => {
     console.log(typeof currentUser._id + ": " + currentUser._id);
     const id = mongoose.Types.ObjectId(String(currentUser._id));
     const newOrderData = {
-      customerId: id,
-      items: orderItems
-    }
+      customerId: currentUser._id,
+      items: [
+        {
+          product: {
+            _id: product['_id'],
+            name: product['name'],
+            price: product['price'],
+            description: product['description']
+          },
+          quantity: productQuantity
+        }
+      ]
+    };
     console.log(2);
-    console.log(newOrderData);
-    const newOrder = new Order(newOrderdata);
-    await newOrder.save();
+    // console.log(newOrderData);
+    // console.log(newOrderData.items[0]);
+    // const newOrder = await new Order(newOrderdata);
+    // await Order.create(newOrderData);
     console.log(3);
-    console.log(newOrder);
+    const newOrder = await Order.find({ customerId: currentUser._id });
     console.log(4);
-    newOrder.save();
+    // await newOrder.save();
+    console.log(newOrder);
+    // console.log(newOrder.)
+    // await newOrder.save();
     console.log(5);
-    return responseUtils.sendJson(response, newOrder)
+    return responseUtils.createdResource(response, newOrder[0])
 
   }
 
@@ -637,6 +653,7 @@ const handleRequest = async (request, response) => {
       return responseUtils.sendJson(response, adminOrders); 
     }
     const customerOrders = await Order.find({ customerId: currentUser['_id'] });
+    console.log(customerOrders);
     return responseUtils.sendJson(response, customerOrders);
   }
 };
