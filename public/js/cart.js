@@ -14,7 +14,7 @@ const decreaseCount = productId => {
   // Remove product from cart if amount is 0,  /public/js/utils.js provides removeElement = (containerId, elementId
   const count = decreaseProductCount(productId);
   updateProductAmount(productId);
-  if (count === 0) removeElement('cart-container', productId);
+  if (parseInt(count) === 0) removeElement('cart-container', productId);
 };
 
 const updateProductAmount = productId => {
