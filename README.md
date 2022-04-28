@@ -6,8 +6,23 @@ What should be in this document is detailed in the 11th exercise round assignmen
 
 # Group 
 
-Member1:  name, email, student ID, 
-resposible for: TODO, short description of duties 
+Member1:  Ahmad Sharif, ahmad.sharif@tuni.fi, K436765, 
+
+ToDo: 
+8.4.1 User Registration
+10.2 MVC - user stories as GitLab issues
+10.2.1 Issues for upcoming MVC features	
+10.3 MVC - Mocha test cases for GitLab issues
+10.3.1 Test case place holders written reflect the issues	
+10.4 MVC - refactoring application
+10.4.1 Split router.js's handleRequest(request, response) into files, modules and functions 
+10.5 Setting up and using the GitLab CI pipeline
+10.5.1 Continuous integration with Gitlab	
+10.6.1 Functional Programming
+
+In Addition, I helped to fix setup issues, Like MongoDB connection. npm run test error issues.
+
+
 
 Member2:  name, email, student ID, 
 resposible for: TODO, short description of duties 
@@ -21,7 +36,18 @@ resposible for: TODO, short description of duties
 
 ## Tests and documentation
 
-TODO: A table with links to at least 10 of your group's GitLab issues, listed with their associated Mocha tests and test files.
+TODO: 
+01. Test Product
+	a) It has all keys. Such as name, price, description
+	b) Price is a valid numner
+	c) Database data and API data equality comparison
+02. Test User
+	a) Test User email
+	b) User Password
+	c) Delete
+	d) It has all valid keys
+	e) User Role check
+	f) User creation Check
 
 ## Security concerns
 
