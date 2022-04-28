@@ -1,6 +1,7 @@
 const User = require("../models/user.js");
 const responseUtils = require("../utils/responseUtils");
 const { getCurrentUser } = require("../auth/auth.js");
+const http = require("http");
 
 const {
   getCredentials,
@@ -31,50 +32,54 @@ module.exports = {
     * 06. the registration of a new user (POST /api/register) to controllers/users.js inside the registerUser() function.
     *
     /****************************************************/
-     registerUser: async (request, response) => {
-        try {
+    /**
+     * Register a new user to the system
+     * 
+     * @param {http.ServerRequest} request the request from admin user
+     * @param {http.ServerResponse} response the response from the server
+     * @returns {http.ServerResponse} a response, with status code and possibly payload of the 
+     * created user.
+     */
+    registerUser: async (request, response) => {
+      try {
+        const { url, method, headers } = request;
+        const authorizationHeader = headers["authorization"];
 
 
-      const { url, method, headers } = request;
-      const authorizationHeader = headers["authorization"];
-
-
-      if (!isJson(request)) {
-        return responseUtils.badRequest(
-          response,
-          "Invalid Content-Type. Expected application/json"
-        );
-      }
-      const userAsJson = await parseBodyJson(request);
-      const user = await User.findOne({ email: userAsJson.email }).exec();
-      const errors = validateUser(userAsJson);
-      if (errors.length) {
-        return responseUtils.badRequest(response, errors);
-      }
-      if (user) {
-        return responseUtils.badRequest(response, "Email already in use!");
-      }
-      // Create a new user
-      const userData = {
-        name: userAsJson.name,
-        email: userAsJson.email,
-        password: userAsJson.password,
-        role: "customer",
-      }; 
-      const newUser = new User(userData);
-      await newUser.save();
-      const newId = newUser._id;
-  
-      const newlyAddedUser = await User.findOne({ _id: newId }).exec();
-      newlyAddedUser.role = "customer";
-      await newlyAddedUser.save();
-      return responseUtils.createdResource(response, newUser);
-       
-        
-        } catch (err) {
-        	
+        if (!isJson(request)) {
+          return responseUtils.badRequest(
+            response,
+            "Invalid Content-Type. Expected application/json"
+          );
         }
-    },
+        const userAsJson = await parseBodyJson(request);
+        const user = await User.findOne({ email: userAsJson.email }).exec();
+        const errors = validateUser(userAsJson);
+        if (errors.length) {
+          return responseUtils.badRequest(response, errors);
+        }
+        if (user) {
+          return responseUtils.badRequest(response, "Email already in use!");
+        }
+        // Create a new user
+        const userData = {
+          name: userAsJson.name,
+          email: userAsJson.email,
+          password: userAsJson.password,
+          role: "customer",
+        }; 
+        const newUser = new User(userData);
+        await newUser.save();
+        const newId = newUser._id;
+    
+        const newlyAddedUser = await User.findOne({ _id: newId }).exec();
+        newlyAddedUser.role = "customer";
+        await newlyAddedUser.save();
+        return responseUtils.createdResource(response, newUser);
+        } catch (err) {
+          console.error(err);
+        }
+      },
 
 
 
@@ -88,7 +93,7 @@ module.exports = {
 
 
 
-    getAllUsers: async (request, response) => {
+    getAllUsers: (request, response) => {
       const { url, method, headers } = request;
 
 

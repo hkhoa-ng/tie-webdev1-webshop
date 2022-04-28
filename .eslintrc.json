@@ -29,14 +29,14 @@
     "no-var": "error",
     "prefer-const": "error",
     "no-unreachable": "error",
-    "complexity": ["warn", 10],
+    "complexity": ["warn", 120],
     "no-invalid-this": "warn",
     "no-multi-spaces": "warn",
     "no-self-assign": "warn",
     "require-await": "warn",
     "no-shadow": "warn",
     "comma-spacing": "warn",
-    "max-lines-per-function": "warn",
+    "max-lines-per-function": ["warn", 500],
     "prefer-object-spread": "warn",
     "prefer-template": "warn"
   }
