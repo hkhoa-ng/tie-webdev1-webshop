@@ -1,4 +1,5 @@
 const mongoose = require("mongoose");
+const ProductSchema = require("./product");
 const Schema = mongoose.Schema;
 
 const SALT_ROUNDS = 10;
@@ -8,13 +9,10 @@ const orderSchema = new Schema({
     type: mongoose.ObjectId,
     required: true
   },
-  items: {
-    type: Array,
-    required: true,
-  },
-  quantity: {
-    type: Number,
-  }
+  items: {[
+    product: Object,
+    quantity: Number
+  ]},
 });
 
 orderSchema.set("toJSON", { virtuals: false, versionKey: false });

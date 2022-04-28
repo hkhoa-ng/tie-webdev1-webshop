@@ -8,13 +8,14 @@ const addToCart = productId => {
 };
 
 const decreaseCount = productId => {
-  console.log("removed!");
   // TODO 9.2
   // Decrease the amount of products in the cart, /public/js/utils.js provides decreaseProductCount()
   // Remove product from cart if amount is 0,  /public/js/utils.js provides removeElement = (containerId, elementId
   const count = decreaseProductCount(productId);
   updateProductAmount(productId);
-  if (parseInt(count) === 0) removeElement('cart-container', productId);
+  if (parseInt(count) === 0) { 
+    removeElement('cart-container', productId); 
+  }
 };
 
 const updateProductAmount = productId => {

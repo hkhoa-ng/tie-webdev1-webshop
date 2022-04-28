@@ -17,25 +17,13 @@ const { renderPublic } = require("../utils/render");
 const Product = require("../models/product");
 
 module.exports = {
-  getAllProducts: async (request, response) => {
+  /**
+   * Return all products in the database
+   * @param {*} response 
+   * @returns 
+   */
+  getAllProducts: async (response, request) => {
     try {
-      const { url, method, headers } = request;
-
-      // const authorizationHeader = headers["authorization"];
-      // if (authorizationHeader === undefined || authorizationHeader === " ") return responseUtils.basicAuthChallenge(response);
-      // const credentials = authorizationHeader.split(" ")[1];
-      // const base64regex =
-      //   /^([0-9a-zA-Z+/]{4})*(([0-9a-zA-Z+/]{2}==)|([0-9a-zA-Z+/]{3}=))?$/;
-      // if (!base64regex.test(credentials)) {
-      //   return responseUtils.basicAuthChallenge(response);
-      // }
-      // const currentUser = await getCurrentUser(request);
-
-      // if (currentUser === null) {
-      //   return responseUtils.basicAuthChallenge(response);
-      // }
-
-      // const products = productData.products.map((product) => ({ ...product }));
       const products = await Product.find({});
       const result = products.map(product => (
         {

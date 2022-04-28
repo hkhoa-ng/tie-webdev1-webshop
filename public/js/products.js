@@ -24,9 +24,17 @@ const addToCart = (productId, productName) => {
   const productTemplate = document.querySelector("#product-template");
 
   try {
-    getJSON("/api/products").then(productsJson => {
-      productsJson.forEach(product => {
-        const {_id: id, name, description, price} = product;
+    console.log("Attempting to get Json products");
+    const products = await getJSON("/api/products");
+    console.log("Got all the products");
+    if (products.length === 0) {
+      const p = document.createElement('p');
+      p.textContent = 'No products';
+      baseContainer.append(p);
+      return;
+    }
+    products.forEach(product => {
+      const {_id: id, name, description, price} = product;
         const productContainer = productTemplate.content.cloneNode(true);
 
         productContainer.querySelector('h3').id = `name-${id}`;
@@ -40,10 +48,28 @@ const addToCart = (productId, productName) => {
         productContainer.querySelector('button').addEventListener('click', () => addToCart(id, name));
 
         baseContainer.appendChild(productContainer);
-      });
     });
+    // getJSON("/api/products").then(productsJson => {
+    //   productsJson.forEach(product => {
+    //     const {_id: id, name, description, price} = product;
+    //     const productContainer = productTemplate.content.cloneNode(true);
+
+    //     productContainer.querySelector('h3').id = `name-${id}`;
+    //     productContainer.querySelector('h3').textContent = name;
+    //     productContainer.querySelector('.product-description').id = `description-${id}`;
+    //     productContainer.querySelector('.product-description').textContent = description;
+    //     productContainer.querySelector('.product-price').id = `price-${id}`;
+    //     productContainer.querySelector('.product-price').textContent = price;
+
+    //     productContainer.querySelector('button').id = `add-to-cart-${id}`;
+    //     productContainer.querySelector('button').addEventListener('click', () => addToCart(id, name));
+
+    //     baseContainer.appendChild(productContainer);
+    //   });
+    // });
     
   } catch (error) {
+    console.log(error);
     console.error(error);
     createNotification(
       'There was an error while fetching products',

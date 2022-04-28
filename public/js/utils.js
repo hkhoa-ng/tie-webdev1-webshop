@@ -19,13 +19,15 @@
  * @returns {Promise<*>} promise that resolves to the parsed JSON
  */
 const getJSON = async (url) => {
+  console.log("Fetching from url: " + url);
   const response = await fetch(url, {
     method: "GET",
-    headers: { 
+    headers: {
       Accept: "application/json",
-      Authorization: "Basic YWRtaW5AZW1haWwuY29tOjEyMzQ1Njc4OTA=",
-    }
+      "Content-Type": "application/json",
+    },
   });
+  console.log("Fetched");
   if (!response.ok) throw new Error("Network response was not OK");
   return await response.json();
 };
@@ -78,6 +80,11 @@ const deleteResource = async (url) => {
   // TODO: 8.6 Implement this
   const response = await fetch(url, {
     method: "DELETE",
+    credentials: "same-origin",
+    headers: {
+      Accept: "application/json",
+      "Content-Type": "application/json",
+    },
   });
   if (!response.ok) throw new Error("Network response was not OK");
   if (response.status < 200 || response.status > 400) {
@@ -141,7 +148,7 @@ const createNotification = (message, containerId, isSuccess = true) => {
  */
 const removeElement = (containerId, elementId) => {
   const container = document.getElementById(containerId);
-  container.querySelectorAll(`#${elementId}`).forEach(element => element.remove());
+  container.querySelectorAll(`[id="${elementId}"]`).forEach(element => element.remove());
 };
 
 const addProductToCart = productId => {

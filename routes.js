@@ -2,6 +2,7 @@
 /* eslint-disable complexity */
 /* eslint-disable max-lines-per-function */
 const responseUtils = require("./utils/responseUtils");
+const mongoose = require('mongoose');
 // const authUtils = require("./auth/auth.js");
 const { getCurrentUser } = require("./auth/auth.js");
 const {
@@ -417,7 +418,7 @@ const handleRequest = async (request, response) => {
     if (!base64regex.test(credentials)) {
       return responseUtils.basicAuthChallenge(response);
     }
-    ProductController.getAllProducts(request, response)
+    ProductController.getAllProducts(response)
   
   }
 
@@ -590,13 +591,17 @@ const handleRequest = async (request, response) => {
       return responseUtils.badRequest(response, "Bad Request"); 
     }
 
+    console.log(requestBody); 
+    console.log(typeof currentUser._id + ": " + currentUser._id);
+    const id = mongoose.Types.ObjectId(String(currentUser._id));
     const newOrderData = {
-      customerId: currentUser['_id'],
-      items: orderItems,
-      quantity: productQuantity,
+      customerId: id,
+      items: orderItems
     }
     console.log(2);
+    console.log(newOrderData);
     const newOrder = new Order(newOrderdata);
+    await newOrder.save();
     console.log(3);
     console.log(newOrder);
     console.log(4);
