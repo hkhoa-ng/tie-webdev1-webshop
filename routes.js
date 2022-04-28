@@ -1,10 +1,7 @@
-/* eslint-disable quotes */
-/* eslint-disable complexity */
-/* eslint-disable max-lines-per-function */
 const responseUtils = require("./utils/responseUtils");
-const mongoose = require('mongoose');
-// const authUtils = require("./auth/auth.js");
+const mongoose = require("mongoose");
 const { getCurrentUser } = require("./auth/auth.js");
+const http = require("http");
 const {
   getCredentials,
   acceptsJson,
@@ -34,7 +31,6 @@ const Order = require("./models/order");
 const UserController = require("./controllers/users.js");
 const ProductController = require("./controllers/products.js");
 
-
 /**
  * Known API routes and their allowed methods
  *
@@ -45,7 +41,7 @@ const allowedMethods = {
   "/api/register": ["POST"],
   "/api/users": ["GET"],
   "/api/products": ["GET", "PUT", "POST"],
-  "/api/orders": ["POST", "GET"]
+  "/api/orders": ["POST", "GET"],
 };
 /**
  * Read the products data in JSON
@@ -59,7 +55,8 @@ const productData = {
  * Send response to client options request.
  *
  * @param {string} filePath pathname of the request URL
- * @param {http.ServerResponse} response
+ * @param {http.ServerResponse} response The response to be eddited and return
+ * @returns {http.ServerResponse} response The response with options header
  */
 const sendOptions = (filePath, response) => {
   if (filePath in allowedMethods) {
@@ -79,8 +76,8 @@ const sendOptions = (filePath, response) => {
  * Does the url have an ID component as its last part? (e.g. /api/users/dsf7844e)
  *
  * @param {string} url filePath
- * @param {string} prefix
- * @returns {boolean}
+ * @param {string} prefix the common path to have
+ * @returns {boolean} true if the route match, false otherwise.
  */
 const matchIdRoute = (url, prefix) => {
   const idPattern = "[0-9a-z]{8,24}";
@@ -92,7 +89,7 @@ const matchIdRoute = (url, prefix) => {
  * Does the URL match /api/users/{id}
  *
  * @param {string} url filePath
- * @returns {boolean}
+ * @returns {boolean} True if the user id match, false otherwise
  */
 const matchUserId = (url) => {
   return matchIdRoute(url, "users");
@@ -100,24 +97,30 @@ const matchUserId = (url) => {
 
 /**
  * Does the URL match /api/products/{id}
- * 
+ *
  * @param {string} url filePath
- * @returns {boolean}
+ * @returns {boolean} True if the product Id match, false otherwise
  */
 const matchProductId = (url) => {
   return matchIdRoute(url, "products");
-}
+};
 
 /**
  * Does the URL match /api/orders/{id}
- * 
+ *
  * @param {string} url filePath
- * @returns {boolean}
+ * @returns {boolean} True if the order Id match, false otherwise
  */
 const matchOrderId = (url) => {
   return matchIdRoute(url, "orders");
-}
+};
 
+/**
+ * Check if the user is authorized and valid in the database
+ *
+ * @param {http.ServerRequest} request  The incoming request with user information
+ * @returns {http.ServerResponse} Base on the request, the user receive the equivalent response.
+ */
 const checkHeader = async (request) => {
   const { headers } = request;
   const authorizationHeader = headers["authorization"];
@@ -136,20 +139,20 @@ const checkHeader = async (request) => {
     return responseUtils.basicAuthChallenge(response);
   }
   // response with 406 not acceptable if Accept header not found/client doesn't accept json
-  const acceptHeader = headers['accept'];
+  const acceptHeader = headers["accept"];
   if (acceptHeader === undefined || !acceptHeader.split("/").includes("json")) {
     return responseUtils.contentTypeNotAcceptable(response);
   }
 
   // check if the auth header is properly encoded
   const credentials = authorizationHeader.split(" ")[1];
-  const base64regex = /^([0-9a-zA-Z+/]{4})*(([0-9a-zA-Z+/]{2}==)|([0-9a-zA-Z+/]{3}=))?$/;
+  const base64regex =
+    /^([0-9a-zA-Z+/]{4})*(([0-9a-zA-Z+/]{2}==)|([0-9a-zA-Z+/]{3}=))?$/;
   // response with basic auth challenge if auth header is not properly encoded
   if (!base64regex.test(credentials)) {
     return responseUtils.basicAuthChallenge(response);
   }
-}
-
+};
 
 const handleRequest = async (request, response) => {
   // Find all users
@@ -163,7 +166,8 @@ const handleRequest = async (request, response) => {
 
   // serve static files from public/ and return immediately
   if (method.toUpperCase() === "GET" && !filePath.startsWith("/api")) {
-    const fileName = filePath === "/" || filePath === "" ? "index.html" : filePath;
+    const fileName =
+      filePath === "/" || filePath === "" ? "index.html" : filePath;
     return renderPublic(fileName, response);
   }
 
@@ -182,8 +186,11 @@ const handleRequest = async (request, response) => {
     }
 
     // Response with 406 Not Acceptable when Accept header is missing/client doesn't accept JSON
-    const acceptHeader = request.headers['accept'];
-    if (acceptHeader === undefined || !acceptHeader.split("/").includes("json")) {
+    const acceptHeader = request.headers["accept"];
+    if (
+      acceptHeader === undefined ||
+      !acceptHeader.split("/").includes("json")
+    ) {
       return responseUtils.contentTypeNotAcceptable(response);
     }
 
@@ -191,7 +198,6 @@ const handleRequest = async (request, response) => {
       return sendOptions(filePath, response);
     }
 
-    
     if (currentUser === null) {
       // response with basic auth challenge if credentials are incorrect
       return responseUtils.basicAuthChallenge(response);
@@ -231,11 +237,11 @@ const handleRequest = async (request, response) => {
     if (method.toUpperCase() === "PUT") {
       const roleToChange = userChangeRole.role;
 
-      if ( !roles.includes(roleToChange) || roleToChange === undefined) {
+      if (!roles.includes(roleToChange) || roleToChange === undefined) {
         return responseUtils.badRequest(response, "Bad Request");
       }
 
-      if (currentUser['role'] === "admin") {
+      if (currentUser["role"] === "admin") {
         // Only update user role if role = admin
         const userToChange = await User.findById(urlId).exec();
         if (userToChange === null) {
@@ -266,11 +272,14 @@ const handleRequest = async (request, response) => {
       return responseUtils.basicAuthChallenge(response);
     }
     // response with 406 not acceptable if Accept header not found/client doesn't accept json
-    const acceptHeader = headers['accept'];
-    if (acceptHeader === undefined || !acceptHeader.split("/").includes("json")) {
+    const acceptHeader = headers["accept"];
+    if (
+      acceptHeader === undefined ||
+      !acceptHeader.split("/").includes("json")
+    ) {
       return responseUtils.contentTypeNotAcceptable(response);
     }
-    
+
     if (method.toUpperCase() === "GET") {
       const productToGet = await Product.findById(urlId).exec();
       if (productToGet === null) {
@@ -281,33 +290,33 @@ const handleRequest = async (request, response) => {
 
     if (method.toUpperCase() === "PUT") {
       const productRequestBody = await parseBodyJson(request);
-      const {name, price, image, description} = productRequestBody;
+      const { name, price, image, description } = productRequestBody;
 
-      if (currentUser['role'] === "customer") {
+      if (currentUser["role"] === "customer") {
         return responseUtils.forbidden(response);
       }
 
-      if (name === ' ') {
+      if (name === " ") {
         return responseUtils.badRequest(response, "Bad Request");
       }
-      
+
       if (isNaN(price) || price === 0 || price <= 0) {
         return responseUtils.badRequest(response, "Bad Request");
       }
 
-      if (currentUser['role'] === "admin") {
+      if (currentUser["role"] === "admin") {
         let productToUpdate = await Product.findById(urlId);
-        
+
         if (productToUpdate === null) {
           return responseUtils.notFound(response);
         }
-        productToUpdate['name'] = name;
-        productToUpdate['price'] = price;
+        productToUpdate["name"] = name;
+        productToUpdate["price"] = price;
         if (image !== undefined) {
-          productToUpdate['image'] = image;
+          productToUpdate["image"] = image;
         }
         if (description !== undefined) {
-          productToUpdate['description'] = description;
+          productToUpdate["description"] = description;
         }
         productToUpdate.save();
         return responseUtils.sendJson(response, productToUpdate);
@@ -315,16 +324,16 @@ const handleRequest = async (request, response) => {
     }
 
     if (method.toUpperCase() === "DELETE") {
-      if (currentUser['role'] === "customer") {
+      if (currentUser["role"] === "customer") {
         return responseUtils.forbidden(response);
       }
-      if (currentUser['role'] === "admin") {
-        const productToDelete = await Product.findById(urlId); 
+      if (currentUser["role"] === "admin") {
+        const productToDelete = await Product.findById(urlId);
         if (productToDelete === null) {
           return responseUtils.notFound(response);
         }
         await Product.deleteOne({ _id: urlId });
-        return responseUtils.sendJson(response, productToDelete); 
+        return responseUtils.sendJson(response, productToDelete);
       }
     }
   }
@@ -347,8 +356,11 @@ const handleRequest = async (request, response) => {
       return responseUtils.basicAuthChallenge(response);
     }
     // response with 406 not acceptable if Accept header not found/client doesn't accept json
-    const acceptHeader = headers['accept'];
-    if (acceptHeader === undefined || !acceptHeader.split("/").includes("json")) {
+    const acceptHeader = headers["accept"];
+    if (
+      acceptHeader === undefined ||
+      !acceptHeader.split("/").includes("json")
+    ) {
       return responseUtils.contentTypeNotAcceptable(response);
     }
 
@@ -357,15 +369,15 @@ const handleRequest = async (request, response) => {
       if (orderToGet === null) {
         return responseUtils.notFound(response);
       }
-      if (currentUser['role'] === 'admin') {
-        return responseUtils.sendJson(response, orderToGet); 
+      if (currentUser["role"] === "admin") {
+        return responseUtils.sendJson(response, orderToGet);
       }
-      if (String(orderToGet['customerId']) !== String(currentUser['_id'])) {
+      if (String(orderToGet["customerId"]) !== String(currentUser["_id"])) {
         return responseUtils.notFound(response);
       }
       console.log(orderToGet);
       console.log(orderToGet.items[0].product);
-      return responseUtils.sendJson(response, orderToGet); 
+      return responseUtils.sendJson(response, orderToGet);
     }
   }
 
@@ -388,7 +400,6 @@ const handleRequest = async (request, response) => {
     return responseUtils.contentTypeNotAcceptable(response);
   }
 
-
   if (filePath === "/api/products" && method.toUpperCase() === "GET") {
     const { headers } = request;
     const authorizationHeader = headers["authorization"];
@@ -407,21 +418,23 @@ const handleRequest = async (request, response) => {
       return responseUtils.basicAuthChallenge(response);
     }
     // response with 406 not acceptable if Accept header not found/client doesn't accept json
-    const acceptHeader = headers['accept'];
-    if (acceptHeader === undefined || !acceptHeader.split("/").includes("json")) {
+    const acceptHeader = headers["accept"];
+    if (
+      acceptHeader === undefined ||
+      !acceptHeader.split("/").includes("json")
+    ) {
       return responseUtils.contentTypeNotAcceptable(response);
     }
 
-  
     // check if the auth header is properly encoded
     const credentials = authorizationHeader.split(" ")[1];
-    const base64regex = /^([0-9a-zA-Z+/]{4})*(([0-9a-zA-Z+/]{2}==)|([0-9a-zA-Z+/]{3}=))?$/;
+    const base64regex =
+      /^([0-9a-zA-Z+/]{4})*(([0-9a-zA-Z+/]{2}==)|([0-9a-zA-Z+/]{3}=))?$/;
     // response with basic auth challenge if auth header is not properly encoded
     if (!base64regex.test(credentials)) {
       return responseUtils.basicAuthChallenge(response);
     }
-    ProductController.getAllProducts(response)
-  
+    ProductController.getAllProducts(response);
   }
 
   if (filePath === "/api/products" && method.toUpperCase() === "POST") {
@@ -441,7 +454,7 @@ const handleRequest = async (request, response) => {
     if (currentUser === null) {
       return responseUtils.basicAuthChallenge(response);
     }
-    if (currentUser['role'] === "customer") {
+    if (currentUser["role"] === "customer") {
       return responseUtils.forbidden(response);
     }
     if (!isJson(request)) {
@@ -458,7 +471,7 @@ const handleRequest = async (request, response) => {
       price: requestBody.price,
       image: requestBody.image,
       description: requestBody.description,
-    }; 
+    };
     const newProduct = new Product(productData);
     await newProduct.save();
     return responseUtils.createdResource(response, newProduct);
@@ -482,7 +495,6 @@ const handleRequest = async (request, response) => {
       return responseUtils.basicAuthChallenge(response);
     }
 
-
     getCurrentUser(request).then((currentUser) => {
       if (currentUser === null) {
         // response with basic auth challenge if credentials are incorrect (no user found)
@@ -497,7 +509,6 @@ const handleRequest = async (request, response) => {
         return responseUtils.sendJson(response, users);
       }
     });
-    
   }
 
   // register new user
@@ -525,7 +536,7 @@ const handleRequest = async (request, response) => {
       email: userAsJson.email,
       password: userAsJson.password,
       role: "customer",
-    }; 
+    };
     const newUser = new User(userData);
     await newUser.save();
     const newId = newUser._id;
@@ -554,46 +565,49 @@ const handleRequest = async (request, response) => {
       return responseUtils.basicAuthChallenge(response);
     }
     // response with 406 not acceptable if Accept header not found/client doesn't accept json
-    const acceptHeader = headers['accept'];
-    if (acceptHeader === undefined || !acceptHeader.split("/").includes("json")) {
+    const acceptHeader = headers["accept"];
+    if (
+      acceptHeader === undefined ||
+      !acceptHeader.split("/").includes("json")
+    ) {
       return responseUtils.contentTypeNotAcceptable(response);
     }
     if (!isJson(request)) {
       return responseUtils.badRequest(response, "Bad Request");
     }
-    if (currentUser['role'] === "admin") {
+    if (currentUser["role"] === "admin") {
       return responseUtils.forbidden(response);
     }
-    
+
     const requestBody = await parseBodyJson(request);
-    if (requestBody['items'].length === 0) {
+    if (requestBody["items"].length === 0) {
       console.log("Items is empty!");
-      return responseUtils.badRequest(response, "Bad Request"); 
+      return responseUtils.badRequest(response, "Bad Request");
     }
     const { items: orderItems } = requestBody;
     const { product, quantity: productQuantity } = orderItems[0];
     if (productQuantity === undefined) {
       console.log("Missing quantity!");
-      return responseUtils.badRequest(response, "Bad Request"); 
+      return responseUtils.badRequest(response, "Bad Request");
     }
     if (product === undefined) {
       console.log("Missing product!");
-      return responseUtils.badRequest(response, "Bad Request"); 
+      return responseUtils.badRequest(response, "Bad Request");
     }
-    if (product['_id'] === undefined) {
+    if (product["_id"] === undefined) {
       console.log("Missing product ID!");
-      return responseUtils.badRequest(response, "Bad Request"); 
+      return responseUtils.badRequest(response, "Bad Request");
     }
-    if (product['name'] === undefined) {
+    if (product["name"] === undefined) {
       console.log("Missing product name!");
-      return responseUtils.badRequest(response, "Bad Request"); 
+      return responseUtils.badRequest(response, "Bad Request");
     }
-    if (product['price'] === undefined) {
+    if (product["price"] === undefined) {
       console.log("Missing price!");
-      return responseUtils.badRequest(response, "Bad Request"); 
+      return responseUtils.badRequest(response, "Bad Request");
     }
 
-    console.log(requestBody); 
+    console.log(requestBody);
     console.log(typeof currentUser._id + ": " + currentUser._id);
     const id = mongoose.Types.ObjectId(String(currentUser._id));
     const newOrderData = {
@@ -601,14 +615,14 @@ const handleRequest = async (request, response) => {
       items: [
         {
           product: {
-            _id: product['_id'],
-            name: product['name'],
-            price: product['price'],
-            description: product['description']
+            _id: product["_id"],
+            name: product["name"],
+            price: product["price"],
+            description: product["description"],
           },
-          quantity: productQuantity
-        }
-      ]
+          quantity: productQuantity,
+        },
+      ],
     };
     console.log(2);
     // console.log(newOrderData);
@@ -623,21 +637,23 @@ const handleRequest = async (request, response) => {
     // console.log(newOrder.)
     // await newOrder.save();
     console.log(5);
-    return responseUtils.createdResource(response, newOrder[0])
-
+    return responseUtils.createdResource(response, newOrder[0]);
   }
 
   if (filePath === "/api/orders" && method.toUpperCase() === "GET") {
     const { headers } = request;
     const authorizationHeader = headers["authorization"];
-    const acceptHeader = headers['accept'];
+    const acceptHeader = headers["accept"];
     const currentUser = await getCurrentUser(request);
     // response with basic auth challenge & 401 Unauthorized if auth header is missing
     // if (!authorizationHeader) {
     //   response.setHeader("WWW-Authenticate", "Basic");
     //   return responseUtils.unauthorized(response);
     // }
-    if (acceptHeader === undefined || !acceptHeader.split("/").includes("json")) {
+    if (
+      acceptHeader === undefined ||
+      !acceptHeader.split("/").includes("json")
+    ) {
       return responseUtils.contentTypeNotAcceptable(response);
     }
     if (authorizationHeader === undefined || authorizationHeader === " ") {
@@ -648,11 +664,11 @@ const handleRequest = async (request, response) => {
     if (currentUser === null) {
       return responseUtils.basicAuthChallenge(response);
     }
-    if (currentUser['role'] === "admin") {
+    if (currentUser["role"] === "admin") {
       const adminOrders = await Order.find({});
-      return responseUtils.sendJson(response, adminOrders); 
+      return responseUtils.sendJson(response, adminOrders);
     }
-    const customerOrders = await Order.find({ customerId: currentUser['_id'] });
+    const customerOrders = await Order.find({ customerId: currentUser["_id"] });
     console.log(customerOrders);
     return responseUtils.sendJson(response, customerOrders);
   }

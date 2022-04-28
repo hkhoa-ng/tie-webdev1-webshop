@@ -10,7 +10,6 @@ require("dotenv").config();
  * @returns {string} connection URL
  */
 const getDbUrl = () => {
-  // TODO: 9.4 Implement this
   const path = process.env.DBURL;
   const defaultUrl = "mongodb://localhost:27017/WebShopDb";
   if (!path) {
@@ -19,6 +18,9 @@ const getDbUrl = () => {
   return path;
 };
 
+/**
+ * Connect to the database if the program is not yet connected.
+ */
 function connectDB() {
   // Do nothing if already connected
   if (!mongoose.connection || mongoose.connection.readyState === 0) {
@@ -41,11 +43,19 @@ function connectDB() {
   }
 }
 
+/**
+ * Throw error when it's detected
+ *
+ * @param {string} err The detected error.
+ */
 function handleCriticalError(err) {
   console.error(err);
   throw err;
 }
 
+/**
+ * Disconnect from the Mongo database
+ */
 function disconnectDB() {
   mongoose.disconnect();
 }

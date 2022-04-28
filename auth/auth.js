@@ -1,33 +1,17 @@
-// const { createNotification } = require("../public/js/utils");
-const {
-  // acceptsJson,
-  getCredentials,
-  // isJson,
-  // parseBodyJson,
-} = require("../utils/requestUtils");
-// require user model
+const { getCredentials } = require("../utils/requestUtils");
+
 const User = require("../models/user");
 
-// const {
-//   deleteUserById,
-//   emailInUse,
-//   getAllUsers,
-//   getUser,
-//   getUserById,
-//   resetUsers,
-//   saveNewUser,
-//   updateUserRole,
-//   validateUser,
-// } = require("../utils/users.js");
+const http = require("http");
 /**
  * Get current user based on the request headers
  *
- * @param {http.IncomingMessage} request
- * @returns {Object|null} current authenticated user or null if not yet authenticated
+ * @param {http.IncomingMessage} request The incoming user information authentication.
+ * @returns {object|null} current authenticated user or null if not yet authenticated
  */
 const getCurrentUser = async (request) => {
   // Check for Authorization header
-  const authHeader = request.headers['authorization'];
+  const authHeader = request.headers["authorization"];
   // Return null if Authorization header is missing/empty, or if Authorization type is not "Basic"
   if (authHeader === undefined || authHeader === "") {
     return null;
@@ -53,7 +37,6 @@ const getCurrentUser = async (request) => {
     return null;
   }
   return currentUser;
-  
 };
 
 module.exports = { getCurrentUser };

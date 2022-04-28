@@ -40,7 +40,7 @@ const getJSON = async (url) => {
  *
  * @param {string} url resource url on the server
  * @param {string} method "PUT" or "POST"
- * @param {Object|Array} data payload data to be sent to the server as JSON
+ * @param {object|Array} data payload data to be sent to the server as JSON
  * @returns {Promise<*>} promise that resolves to the parsed JSON
  */
 const postOrPutJSON = async (url, method, data = {}) => {
@@ -97,7 +97,7 @@ const deleteResource = async (url) => {
  * or other HTML elements (remember that IDs must be unique within
  * a document).
  *
- * @returns {string}
+ * @returns {string} The generated Id.
  */
 const generateId = () => {
   // Shamelessly borrowed from a Gist. See:
@@ -111,7 +111,7 @@ const generateId = () => {
  * Appends a new paragraph inside the container element and gives it
  * class based on the status of the message (success or failure).
  *
- * @param {string} message
+ * @param {string} message The notification will be appeared
  * @param {string} containerId id attribute of the container element
  * @param {boolean} isSuccess whether the message describes a success or a failure
  */
@@ -148,16 +148,18 @@ const createNotification = (message, containerId, isSuccess = true) => {
  */
 const removeElement = (containerId, elementId) => {
   const container = document.getElementById(containerId);
-  container.querySelectorAll(`[id="${elementId}"]`).forEach(element => element.remove());
+  container
+    .querySelectorAll(`[id="${elementId}"]`)
+    .forEach((element) => element.remove());
 };
 
-const addProductToCart = productId => {
+const addProductToCart = (productId) => {
   const productCount = getProductCountFromCart(productId);
   // TODO 9.2
   // Use sessionStorage's setItem('key', 'value')
   // (https://developer.mozilla.org/en-US/docs/Web/API/Window/sessionStorage#basic_usage)
   // to set the product data to the session storage
-  // if the productCount is undefined 
+  // if the productCount is undefined
   //    key: productId
   //    data: 1
   // but if productCount is defined
@@ -171,7 +173,7 @@ const addProductToCart = productId => {
   return getProductCountFromCart(productId);
 };
 
-const decreaseProductCount = productId => {
+const decreaseProductCount = (productId) => {
   const productCount = parseInt(getProductCountFromCart(productId));
   if (productCount > 1) {
     // TODO 9.2
@@ -184,9 +186,9 @@ const decreaseProductCount = productId => {
     sessionStorage.setItem(productId, newCount);
     return newCount;
   } else {
-    // TODO 9.2 
-    // use sessionStorage's removeItem('key') to remove 
-    // the item if its count/amount drops to zero 
+    // TODO 9.2
+    // use sessionStorage's removeItem('key') to remove
+    // the item if its count/amount drops to zero
     // (https://developer.mozilla.org/en-US/docs/Web/API/Window/sessionStorage#basic_usage)
     //    key: productId
     sessionStorage.removeItem(productId);
@@ -194,12 +196,12 @@ const decreaseProductCount = productId => {
   }
 };
 
-const getProductCountFromCart = productId => {
+const getProductCountFromCart = (productId) => {
   // TODO 9.2
   // use sessionStorage's getItem('key') to to fetch and
-  // return the storage item product's value/amount 
+  // return the storage item product's value/amount
   // from the session storage
-  // with the productId as the key 
+  // with the productId as the key
   // (https://developer.mozilla.org/en-US/docs/Web/API/Window/sessionStorage#basic_usage)
   //    key: productId
   // Return the fetched product amount (the fetched
@@ -209,10 +211,10 @@ const getProductCountFromCart = productId => {
 };
 
 const getAllProductsFromCart = () => {
-  return Object.keys(sessionStorage).reduce((array, str) => {
+  return object.keys(sessionStorage).reduce((array, str) => {
     const item = {
       name: str,
-      amount: sessionStorage.getItem(str)
+      amount: sessionStorage.getItem(str),
     };
     return [...array, item];
   }, []);
@@ -220,7 +222,7 @@ const getAllProductsFromCart = () => {
 
 const clearCart = () => {
   // TODO 9.2
-  // use sessionStorage's clear() to remove 
+  // use sessionStorage's clear() to remove
   // items from the session storage
   // (https://developer.mozilla.org/en-US/docs/Web/API/Window/sessionStorage#basic_usage)
   //    key: productId
