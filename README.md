@@ -51,7 +51,7 @@ Our group has 3 members, and we coordinate our work using Telegram and GitLab.
 
 ## Node Project Structure
 
-The project's structure consists of 3 main components: the **models** for database handling, the **controller** to control the behavior of components, and the **Views (UI)** to view the data. Together, they formed the _MVC Architecture_ for the project.
+The project's structure consists of 3 main components: the **models** for database handling, the **controllers** to control the behavior of components, and the **Views (UI)** to view the data. Together, they formed the _MVC Architecture_ for the project.
 
 ### **Models**
 
@@ -69,6 +69,8 @@ The UI of the service is control by the files in `./public/js/*.js`, including u
 
 The project structure can be presented using the UML diagram as follow.
 
+![Project Structure](./project-structure.png)
+
 </br>
 
 ---
@@ -85,6 +87,8 @@ Be mindful that, in order to access those page, the user will be prompted to log
 
 The navigation of the page can be present with a diagram below.
 
+![Navigation Diagram](./nav-diagram.png)
+
   </br>
 
 ---
@@ -97,12 +101,14 @@ When using the service, these models will be updated accordingly, and as a resul
 
 ### **User**
 
-Data model for all the users of the service. Can be viewed in the [List Users](https://webdev1shop.herokuapp.com/users.html) page of the service. The data model for the user contains these fields:
+Data model for all the users of the service. Using this data model, user can register to the service, update their information, and login. All the users of the service can be viewed in the [List Users](https://webdev1shop.herokuapp.com/users.html) page of the service. The data model for the user contains these fields:
 
 - `name`: the name of the user. Is of type `String`. Always required for an user.
 - `email`: the email of the user. Is of type `String`. Always required for an user. The email will be checked to be a valid email address before creating/updating the user.
 - `password`: the password of the user. Is of type `String`. Always required for an user. The password will be hashed before saving into the database to ensure security.
 - `role`: the role of the user. Is of type `String`. Always required for an user. There are 2 roles: `customer` (the default role) and `admin` (can modify data in the service).
+
+After creation, each user will be assigned a unique ID by MongoDB. This ID can be used to find user and find orders placed by that users.
 
 ### **Product**
 
@@ -113,6 +119,8 @@ Data model for all the products listed on the [List Products](https://webdev1sho
 - `image`: the image URL of the product. Is of type `String`. Is not required for a product.
 - `description`: the description of the product. Is of type `String`. Is not required for a product.
 
+After creation, each product will be assign a unique ID by MongoDB. This ID can be used to find the product and make sure that the product data is consistent with the frontend product. display.
+
 ### **Order**
 
 Data model for an order made by an user of the service. The data model for the product contains these fields:
@@ -121,6 +129,9 @@ Data model for an order made by an user of the service. The data model for the p
 - `items`: the items that order contains. Is of type `Array`. This array will store multiple `Object` that has the following fields:
   - `product`: the `product` that this `Object` represent. The information stored in this object is the same as the corresponding product.
   - `quantity`: the number of this particular product that this user has ordered. Is of type `Number`. Always required for an order.
+  - After creation, this `Object` will be assigned a unique ID by MongoDB.
+
+The `Order` data model can be used to track the orders that have been placed by a given `User`. The orders can be found using the `customerId` field of each order.
 
 Using these Data Model, the service can function correctly by manipulating the database with consistent from front to backend and vice-versa.
 
