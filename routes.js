@@ -39,9 +39,9 @@ const ProductController = require("./controllers/products.js");
  */
 const allowedMethods = {
   "/api/register": ["POST"],
-  "/api/users": ["GET"],
-  "/api/products": ["GET", "PUT", "POST"],
-  "/api/orders": ["POST", "GET"]
+  "/api/users": ["GET", "PUT", "DELETE"],
+  "/api/products": ["GET", "PUT", "POST", "DELETE"],
+  "/api/orders": ["POST", "GET"],
 };
 
 /**
@@ -112,9 +112,11 @@ const matchOrderId = (url) => {
  * Check if the user is authorized and valid in the database
  *
  * @param {http.ServerRequest} request  The incoming request with user information
+ * @param {http.ServerResponse} response The response that will be eddited and send to user
+ * @param {boolean} checkCustomer flag to see if checking the customer is needed
  * @returns {http.ServerResponse} Base on the request, the user receive the equivalent response.
  */
-const checkHeader = async (request) => {
+const checkHeader = async (request, response, checkCustomer) => {
   const { headers } = request;
   const authorizationHeader = headers["authorization"];
   const currentUser = await getCurrentUser(request);
@@ -127,14 +129,10 @@ const checkHeader = async (request) => {
     // response with basic auth challenge if auth header is missing/empty
     return responseUtils.basicAuthChallenge(response);
   }
-  // response with basic auth challenge if credentials are incorrect
+
   if (currentUser === null) {
+    // response with basic auth challenge if credentials are incorrect
     return responseUtils.basicAuthChallenge(response);
-  }
-  // response with 406 not acceptable if Accept header not found/client doesn't accept json
-  const acceptHeader = headers["accept"];
-  if (acceptHeader === undefined || !acceptHeader.split("/").includes("json")) {
-    return responseUtils.contentTypeNotAcceptable(response);
   }
 
   // check if the auth header is properly encoded
@@ -145,6 +143,12 @@ const checkHeader = async (request) => {
   if (!base64regex.test(credentials)) {
     return responseUtils.basicAuthChallenge(response);
   }
+
+  if (checkCustomer && currentUser.role === "customer") {
+    return responseUtils.forbidden(response);
+  }
+
+  return null;
 };
 
 const handleRequest = async (request, response) => {
@@ -162,48 +166,219 @@ const handleRequest = async (request, response) => {
     return renderPublic(fileName, response);
   }
 
+  // See: http://restcookbook.com/HTTP%20Methods/options/
+  if (method.toUpperCase() === "OPTIONS") {
+    return sendOptions(filePath, response);
+  }
+
   const currentUser = await getCurrentUser(request);
+  let simplifiedFilePath = "";
+  const slashCount = [...filePath].filter((char) => char === "/").length;
+  if (slashCount === 2) {
+    simplifiedFilePath = filePath;
+  } else if (slashCount === 3) {
+    const removeDetailArr = filePath.split("/");
+    removeDetailArr.pop();
+    removeDetailArr.shift();
+    removeDetailArr.forEach((str) => (simplifiedFilePath += `/${str}`));
+  }
 
-  if (matchUserId(filePath)) {
-    // DONE: 8.6 Implement view, update and delete a single user by ID (GET, PUT, DELETE)
-    const authorizationHeader = headers["authorization"];
-    if (!authorizationHeader) {
-      response.setHeader("WWW-Authenticate", "Basic");
-      return responseUtils.unauthorized(response);
-    }
-    if (authorizationHeader === undefined || authorizationHeader === " ") {
-      // response with basic auth challenge if auth header is missing/empty
-      return responseUtils.basicAuthChallenge(response);
-    }
+  // general API api/users
+  if (!(simplifiedFilePath in allowedMethods)) {
+    return responseUtils.notFound(response);
+  }
 
-    // Response with 406 Not Acceptable when Accept header is missing/client doesn't accept JSON
-    const acceptHeader = request.headers["accept"];
+  // Check for allowable methods
+  if (!allowedMethods[simplifiedFilePath].includes(method.toUpperCase())) {
+    return responseUtils.methodNotAllowed(response);
+  }
+
+  // Require a correct accept header (require 'application/json' or '*/*')
+  const acceptHeader = headers["accept"];
+  if (acceptHeader === undefined || !acceptHeader.split("/").includes("json")) {
+    // There are 2 special cases in put user and put product that need following if
     if (
-      acceptHeader === undefined ||
-      !acceptHeader.split("/").includes("json")
+      method.toUpperCase() === "PUT" &&
+      headers["authorization"] === undefined
     ) {
-      return responseUtils.contentTypeNotAcceptable(response);
-    }
-
-    if (method.toUpperCase() === "OPTIONS") {
-      return sendOptions(filePath, response);
-    }
-
-    if (currentUser === null) {
-      // response with basic auth challenge if credentials are incorrect
       return responseUtils.basicAuthChallenge(response);
     }
-    // response with basic auth challenge if customer credentials are parse
-    if (currentUser.role === "customer") {
-      return responseUtils.forbidden(response);
+    return responseUtils.contentTypeNotAcceptable(response);
+  }
+  if (filePath === "/api/products") {
+    const headerCheck = await checkHeader(request, response, false).then(
+      (data) => data
+    );
+    if (headerCheck !== null) {
+      return headerCheck;
+    }
+
+    if (method.toUpperCase() === "GET") {
+      return ProductController.getAllProducts(response);
+    }
+
+    if (method.toUpperCase() === "POST") {
+      if (currentUser.role === "customer") {
+        return responseUtils.forbidden(response);
+      }
+
+      if (!isJson(request)) {
+        return responseUtils.badRequest(response, "Bad Request");
+      }
+
+      const requestBody = await parseBodyJson(request);
+      if (requestBody.name === undefined || requestBody.price === undefined) {
+        return responseUtils.badRequest(response, "Bad Request");
+      }
+
+      // Create a new product
+      const productData = {
+        name: requestBody.name,
+        price: requestBody.price,
+        image: requestBody.image,
+        description: requestBody.description,
+      };
+      const newProduct = new Product(productData);
+      await newProduct.save();
+      return responseUtils.createdResource(response, newProduct);
+    }
+  }
+
+  // GET all users
+  if (filePath === "/api/users" && method.toUpperCase() === "GET") {
+    // DONE: 8.5 Add authentication (only allowed to users with role "admin")
+
+    const headerCheck = await checkHeader(request, response, true).then(
+      (data) => data
+    );
+    if (headerCheck !== null) {
+      return headerCheck;
+    }
+    if (currentUser.role === "admin") {
+      // respond with json when admin credentials are received
+      return responseUtils.sendJson(response, users);
+    }
+  }
+  // register new user
+  if (filePath === "/api/register" && method.toUpperCase() === "POST") {
+    // DONE: 8.4 Implement user registration
+    // Fail if not a JSON request, don't allow non-JSON Content-Type
+    if (!isJson(request)) {
+      return responseUtils.badRequest(
+        response,
+        "Invalid Content-Type. Expected application/json"
+      );
+    }
+    const userAsJson = await parseBodyJson(request);
+    const user = await User.findOne({ email: userAsJson.email }).exec();
+    const errors = validateUser(userAsJson);
+    if (errors.length) {
+      return responseUtils.badRequest(response, errors);
+    }
+    if (user) {
+      return responseUtils.badRequest(response, "Email already in use!");
+    }
+    // Create a new user
+    const userData = {
+      name: userAsJson.name,
+      email: userAsJson.email,
+      password: userAsJson.password,
+      role: "customer",
+    };
+    const newUser = new User(userData);
+    await newUser.save();
+    const newId = newUser._id;
+
+    const newlyAddedUser = await User.findOne({ _id: newId }).exec();
+    newlyAddedUser.role = "customer";
+    await newlyAddedUser.save();
+    return responseUtils.createdResource(response, newUser);
+  }
+
+  if (filePath === "/api/orders") {
+    const headerCheck = await checkHeader(request, response, false).then(
+      (data) => data
+    );
+
+    if (headerCheck !== null) {
+      return headerCheck;
+    }
+
+    if (method.toUpperCase() === "GET") {
+      if (currentUser["role"] === "admin") {
+        const adminOrders = await Order.find({});
+        return responseUtils.sendJson(response, adminOrders);
+      }
+      const customerOrders = await Order.find({
+        customerId: currentUser["_id"],
+      });
+      return responseUtils.sendJson(response, customerOrders);
+    }
+
+    if (method.toUpperCase() === "POST") {
+      if (!isJson(request)) {
+        return responseUtils.badRequest(response, "Bad Request");
+      }
+
+      if (currentUser["role"] === "admin") {
+        return responseUtils.forbidden(response);
+      }
+
+      const requestBody = await parseBodyJson(request);
+      if (requestBody["items"].length === 0) {
+        return responseUtils.badRequest(response, "Bad Request");
+      }
+      const { items: orderItems } = requestBody;
+      const { product, quantity: productQuantity } = orderItems[0];
+      if (productQuantity === undefined) {
+        return responseUtils.badRequest(response, "Bad Request");
+      }
+      if (product === undefined) {
+        return responseUtils.badRequest(response, "Bad Request");
+      }
+      if (product["_id"] === undefined) {
+        return responseUtils.badRequest(response, "Bad Request");
+      }
+      if (product["name"] === undefined) {
+        return responseUtils.badRequest(response, "Bad Request");
+      }
+      if (product["price"] === undefined) {
+        return responseUtils.badRequest(response, "Bad Request");
+      }
+
+      const id = mongoose.Types.ObjectId(String(currentUser._id));
+      const newOrderData = {
+        customerId: currentUser._id,
+        items: [
+          {
+            product: {
+              _id: product["_id"],
+              name: product["name"],
+              price: product["price"],
+              description: product["description"],
+            },
+            quantity: productQuantity,
+          },
+        ],
+      };
+      const newOrder = await Order.find({ customerId: currentUser._id });
+      return responseUtils.createdResource(response, newOrder[0]);
+    }
+  }
+  if (matchUserId(filePath)) {
+    const headerCheck = await checkHeader(request, response, true).then(
+      (data) => data
+    );
+    if (headerCheck !== null) {
+      return headerCheck;
     }
     if (method.toUpperCase() === "GET") {
-      const loginUser = await getCurrentUser(request);
       const userToGet = await User.findById(urlId).exec();
+
       if (userToGet === null) {
         return responseUtils.notFound(response);
       }
-      if (loginUser["role"] === "admin") {
+      if (currentUser["role"] === "admin") {
         return responseUtils.sendJson(response, userToGet);
       }
     }
@@ -239,27 +414,11 @@ const handleRequest = async (request, response) => {
   }
 
   if (matchProductId(filePath)) {
-    const authorizationHeader = headers["authorization"];
-    // response with basic auth challenge & 401 Unauthorized if auth header is missing
-    if (!authorizationHeader) {
-      response.setHeader("WWW-Authenticate", "Basic");
-      return responseUtils.unauthorized(response);
-    }
-    if (authorizationHeader === undefined || authorizationHeader === " ") {
-      // response with basic auth challenge if auth header is missing/empty
-      return responseUtils.basicAuthChallenge(response);
-    }
-    // response with basic auth challenge if credentials are incorrect
-    if (currentUser === null) {
-      return responseUtils.basicAuthChallenge(response);
-    }
-    // response with 406 not acceptable if Accept header not found/client doesn't accept json
-    const acceptHeader = headers["accept"];
-    if (
-      acceptHeader === undefined ||
-      !acceptHeader.split("/").includes("json")
-    ) {
-      return responseUtils.contentTypeNotAcceptable(response);
+    const headerCheck = await checkHeader(request, response, false).then(
+      (data) => data
+    );
+    if (headerCheck !== null) {
+      return headerCheck;
     }
 
     if (method.toUpperCase() === "GET") {
@@ -321,23 +480,11 @@ const handleRequest = async (request, response) => {
   }
 
   if (matchOrderId(filePath)) {
-    const authorizationHeader = headers["authorization"];
-    // response with basic auth challenge & 401 Unauthorized if auth header is missing
-    if (authorizationHeader === undefined || authorizationHeader === " ") {
-      // response with basic auth challenge if auth header is missing/empty
-      return responseUtils.basicAuthChallenge(response);
-    }
-    // response with basic auth challenge if credentials are incorrect
-    if (currentUser === null) {
-      return responseUtils.basicAuthChallenge(response);
-    }
-    // response with 406 not acceptable if Accept header not found/client doesn't accept json
-    const acceptHeader = headers["accept"];
-    if (
-      acceptHeader === undefined ||
-      !acceptHeader.split("/").includes("json")
-    ) {
-      return responseUtils.contentTypeNotAcceptable(response);
+    const headerCheck = await checkHeader(request, response, false).then(
+      (data) => data
+    );
+    if (headerCheck !== null) {
+      return headerCheck;
     }
 
     if (method.toUpperCase() === "GET") {
@@ -353,257 +500,6 @@ const handleRequest = async (request, response) => {
       }
       return responseUtils.sendJson(response, orderToGet);
     }
-  }
-
-  if (!(filePath in allowedMethods)) {
-    return responseUtils.notFound(response);
-  }
-
-  // See: http://restcookbook.com/HTTP%20Methods/options/
-  if (method.toUpperCase() === "OPTIONS") {
-    return sendOptions(filePath, response);
-  }
-
-  // Check for allowable methods
-  if (!allowedMethods[filePath].includes(method.toUpperCase())) {
-    return responseUtils.methodNotAllowed(response);
-  }
-
-  // Require a correct accept header (require 'application/json' or '*/*')
-  if (!acceptsJson(request)) {
-    return responseUtils.contentTypeNotAcceptable(response);
-  }
-
-  if (filePath === "/api/products" && method.toUpperCase() === "GET") {
-    const authorizationHeader = headers["authorization"];
-    // response with basic auth challenge & 401 Unauthorized if auth header is missing
-    if (!authorizationHeader) {
-      response.setHeader("WWW-Authenticate", "Basic");
-      return responseUtils.unauthorized(response);
-    }
-    if (authorizationHeader === undefined || authorizationHeader === " ") {
-      // response with basic auth challenge if auth header is missing/empty
-      return responseUtils.basicAuthChallenge(response);
-    }
-    // response with basic auth challenge if credentials are incorrect
-    if (currentUser === null) {
-      return responseUtils.basicAuthChallenge(response);
-    }
-    // response with 406 not acceptable if Accept header not found/client doesn't accept json
-    const acceptHeader = headers["accept"];
-    if (
-      acceptHeader === undefined ||
-      !acceptHeader.split("/").includes("json")
-    ) {
-      return responseUtils.contentTypeNotAcceptable(response);
-    }
-
-    const credentials = authorizationHeader.split(" ")[1];
-    const base64regex =
-      /^([0-9a-zA-Z+/]{4})*(([0-9a-zA-Z+/]{2}==)|([0-9a-zA-Z+/]{3}=))?$/;
-    // response with basic auth challenge if auth header is not properly encoded
-    if (!base64regex.test(credentials)) {
-      return responseUtils.basicAuthChallenge(response);
-    }
-    ProductController.getAllProducts(response);
-  }
-
-  if (filePath === "/api/products" && method.toUpperCase() === "POST") {
-    const authorizationHeader = headers["authorization"];
-    // response with basic auth challenge & 401 Unauthorized if auth header is missing
-    if (!authorizationHeader) {
-      response.setHeader("WWW-Authenticate", "Basic");
-      return responseUtils.unauthorized(response);
-    }
-    if (authorizationHeader === undefined || authorizationHeader === " ") {
-      // response with basic auth challenge if auth header is missing/empty
-      return responseUtils.basicAuthChallenge(response);
-    }
-    // response with basic auth challenge if credentials are incorrect
-    if (currentUser === null) {
-      return responseUtils.basicAuthChallenge(response);
-    }
-    if (currentUser["role"] === "customer") {
-      return responseUtils.forbidden(response);
-    }
-    if (!isJson(request)) {
-      return responseUtils.badRequest(response, "Bad Request");
-    }
-    const requestBody = await parseBodyJson(request);
-    if (requestBody.name === undefined || requestBody.price === undefined) {
-      return responseUtils.badRequest(response, "Bad Request");
-    }
-
-    // Create a new product
-    const productData = {
-      name: requestBody.name,
-      price: requestBody.price,
-      image: requestBody.image,
-      description: requestBody.description,
-    };
-    const newProduct = new Product(productData);
-    await newProduct.save();
-    return responseUtils.createdResource(response, newProduct);
-  }
-
-  // GET all users
-  if (filePath === "/api/users" && method.toUpperCase() === "GET") {
-    // DONE: 8.5 Add authentication (only allowed to users with role "admin")
-    const authorizationHeader = headers["authorization"];
-    if (!authorizationHeader) {
-      // response with basic auth challenge if auth header is missing/empty
-      return responseUtils.basicAuthChallenge(response);
-    }
-
-    // check if the header is properly encoded
-    const credentials = authorizationHeader.split(" ")[1];
-    const base64regex =
-      /^([0-9a-zA-Z+/]{4})*(([0-9a-zA-Z+/]{2}==)|([0-9a-zA-Z+/]{3}=))?$/;
-    if (!base64regex.test(credentials)) {
-      // response with basic auth challenge if auth header is not properly encoded
-      return responseUtils.basicAuthChallenge(response);
-    }
-    if (currentUser === null) {
-      // response with basic auth challenge if credentials are incorrect (no user found)
-      return responseUtils.basicAuthChallenge(response);
-    }
-    // response with basic auth challenge if customer credentials are parsed
-    if (currentUser.role === "customer") {
-      return responseUtils.forbidden(response);
-    }
-    if (currentUser.role === "admin") {
-      // respond with json when admin credentials are received
-      return responseUtils.sendJson(response, users);
-    }
-  }
-
-  // register new user
-  if (filePath === "/api/register" && method.toUpperCase() === "POST") {
-    // DONE: 8.4 Implement user registration
-    // Fail if not a JSON request, don't allow non-JSON Content-Type
-    if (!isJson(request)) {
-      return responseUtils.badRequest(
-        response,
-        "Invalid Content-Type. Expected application/json"
-      );
-    }
-    const userAsJson = await parseBodyJson(request);
-    const user = await User.findOne({ email: userAsJson.email }).exec();
-    const errors = validateUser(userAsJson);
-    if (errors.length) {
-      return responseUtils.badRequest(response, errors);
-    }
-    if (user) {
-      return responseUtils.badRequest(response, "Email already in use!");
-    }
-    // Create a new user
-    const userData = {
-      name: userAsJson.name,
-      email: userAsJson.email,
-      password: userAsJson.password,
-      role: "customer",
-    };
-    const newUser = new User(userData);
-    await newUser.save();
-    const newId = newUser._id;
-
-    const newlyAddedUser = await User.findOne({ _id: newId }).exec();
-    newlyAddedUser.role = "customer";
-    await newlyAddedUser.save();
-    return responseUtils.createdResource(response, newUser);
-  }
-
-  if (filePath === "/api/orders" && method.toUpperCase() === "POST") {
-    const authorizationHeader = headers["authorization"];
-    // response with basic auth challenge & 401 Unauthorized if auth header is missing
-    if (authorizationHeader === undefined || authorizationHeader === " ") {
-      // response with basic auth challenge if auth header is missing/empty
-      return responseUtils.basicAuthChallenge(response);
-    }
-    // response with basic auth challenge if credentials are incorrect
-    if (currentUser === null) {
-      return responseUtils.basicAuthChallenge(response);
-    }
-    // response with 406 not acceptable if Accept header not found/client doesn't accept json
-    const acceptHeader = headers["accept"];
-    if (
-      acceptHeader === undefined ||
-      !acceptHeader.split("/").includes("json")
-    ) {
-      return responseUtils.contentTypeNotAcceptable(response);
-    }
-    if (!isJson(request)) {
-      return responseUtils.badRequest(response, "Bad Request");
-    }
-    if (currentUser["role"] === "admin") {
-      return responseUtils.forbidden(response);
-    }
-
-    const requestBody = await parseBodyJson(request);
-    if (requestBody["items"].length === 0) {
-      return responseUtils.badRequest(response, "Bad Request");
-    }
-    const { items: orderItems } = requestBody;
-    const { product, quantity: productQuantity } = orderItems[0];
-    if (productQuantity === undefined) {
-      return responseUtils.badRequest(response, "Bad Request");
-    }
-    if (product === undefined) {
-      return responseUtils.badRequest(response, "Bad Request");
-    }
-    if (product["_id"] === undefined) {
-      return responseUtils.badRequest(response, "Bad Request");
-    }
-    if (product["name"] === undefined) {
-      return responseUtils.badRequest(response, "Bad Request");
-    }
-    if (product["price"] === undefined) {
-      return responseUtils.badRequest(response, "Bad Request");
-    }
-
-    const id = mongoose.Types.ObjectId(String(currentUser._id));
-    const newOrderData = {
-      customerId: currentUser._id,
-      items: [
-        {
-          product: {
-            _id: product["_id"],
-            name: product["name"],
-            price: product["price"],
-            description: product["description"],
-          },
-          quantity: productQuantity,
-        },
-      ],
-    };
-    const newOrder = await Order.find({ customerId: currentUser._id });
-    return responseUtils.createdResource(response, newOrder[0]);
-  }
-
-  if (filePath === "/api/orders" && method.toUpperCase() === "GET") {
-    const authorizationHeader = headers["authorization"];
-    const acceptHeader = headers["accept"];
-    // response with basic auth challenge & 401 Unauthorized if auth header is missing
-    if (
-      acceptHeader === undefined ||
-      !acceptHeader.split("/").includes("json")
-    ) {
-      return responseUtils.contentTypeNotAcceptable(response);
-    }
-    if (authorizationHeader === undefined || authorizationHeader === " ") {
-      // response with basic auth challenge if auth header is missing/empty
-      return responseUtils.basicAuthChallenge(response);
-    }
-    // response with basic auth challenge if credentials are incorrect
-    if (currentUser === null) {
-      return responseUtils.basicAuthChallenge(response);
-    }
-    if (currentUser["role"] === "admin") {
-      const adminOrders = await Order.find({});
-      return responseUtils.sendJson(response, adminOrders);
-    }
-    const customerOrders = await Order.find({ customerId: currentUser["_id"] });
-    return responseUtils.sendJson(response, customerOrders);
   }
 };
 
