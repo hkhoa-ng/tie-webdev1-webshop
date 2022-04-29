@@ -31,6 +31,8 @@ module.exports = {
         description: product["description"],
       }));
       return responseUtils.sendJson(response, result, 200);
-    } catch (err) {}
+    } catch (err) {
+      console.error(err);
+    }
   },
 };

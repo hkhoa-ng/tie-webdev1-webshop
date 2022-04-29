@@ -41,14 +41,7 @@ const allowedMethods = {
   "/api/register": ["POST"],
   "/api/users": ["GET"],
   "/api/products": ["GET", "PUT", "POST"],
-  "/api/orders": ["POST", "GET"],
-};
-/**
- * Read the products data in JSON
- */
-const productData = {
-  // Make copies of products (prevents changing from outside this module/file)
-  products: require("./products.json").map((product) => ({ ...product })),
+  "/api/orders": ["POST", "GET"]
 };
 
 /**
@@ -162,8 +155,6 @@ const handleRequest = async (request, response) => {
   const filePath = new URL(url, `http://${headers.host}`).pathname;
   const urlId = filePath.split("/")[3];
 
-  // console.log(request);
-
   // serve static files from public/ and return immediately
   if (method.toUpperCase() === "GET" && !filePath.startsWith("/api")) {
     const fileName =
@@ -202,10 +193,6 @@ const handleRequest = async (request, response) => {
       // response with basic auth challenge if credentials are incorrect
       return responseUtils.basicAuthChallenge(response);
     }
-    // const uid = filePath.split("/")[3];
-    // if (User.findById(uid).exec() === null) {
-    //   return responseUtils.notFound(response);
-    // }
     // response with basic auth challenge if customer credentials are parse
     if (currentUser.role === "customer") {
       return responseUtils.forbidden(response);
@@ -219,7 +206,6 @@ const handleRequest = async (request, response) => {
       if (loginUser["role"] === "admin") {
         return responseUtils.sendJson(response, userToGet);
       }
-      console.log(urlId);
     }
     if (method.toUpperCase() === "DELETE" && currentUser.role === "admin") {
       // Find user to be deleted with ID, and then delete and return that user
@@ -231,8 +217,6 @@ const handleRequest = async (request, response) => {
       return responseUtils.sendJson(response, userToBeDeleted);
     }
     const userChangeRole = await parseBodyJson(request);
-
-    // console.log(userChangeRole);
 
     if (method.toUpperCase() === "PUT") {
       const roleToChange = userChangeRole.role;
@@ -255,9 +239,7 @@ const handleRequest = async (request, response) => {
   }
 
   if (matchProductId(filePath)) {
-    const { headers } = request;
     const authorizationHeader = headers["authorization"];
-    const currentUser = await getCurrentUser(request);
     // response with basic auth challenge & 401 Unauthorized if auth header is missing
     if (!authorizationHeader) {
       response.setHeader("WWW-Authenticate", "Basic");
@@ -305,7 +287,7 @@ const handleRequest = async (request, response) => {
       }
 
       if (currentUser["role"] === "admin") {
-        let productToUpdate = await Product.findById(urlId);
+        const productToUpdate = await Product.findById(urlId);
 
         if (productToUpdate === null) {
           return responseUtils.notFound(response);
@@ -339,14 +321,8 @@ const handleRequest = async (request, response) => {
   }
 
   if (matchOrderId(filePath)) {
-    const { headers } = request;
     const authorizationHeader = headers["authorization"];
-    const currentUser = await getCurrentUser(request);
     // response with basic auth challenge & 401 Unauthorized if auth header is missing
-    // if (!authorizationHeader) {
-    //   response.setHeader("WWW-Authenticate", "Basic");
-    //   return responseUtils.unauthorized(response);
-    // }
     if (authorizationHeader === undefined || authorizationHeader === " ") {
       // response with basic auth challenge if auth header is missing/empty
       return responseUtils.basicAuthChallenge(response);
@@ -375,8 +351,6 @@ const handleRequest = async (request, response) => {
       if (String(orderToGet["customerId"]) !== String(currentUser["_id"])) {
         return responseUtils.notFound(response);
       }
-      console.log(orderToGet);
-      console.log(orderToGet.items[0].product);
       return responseUtils.sendJson(response, orderToGet);
     }
   }
@@ -401,9 +375,7 @@ const handleRequest = async (request, response) => {
   }
 
   if (filePath === "/api/products" && method.toUpperCase() === "GET") {
-    const { headers } = request;
     const authorizationHeader = headers["authorization"];
-    const currentUser = await getCurrentUser(request);
     // response with basic auth challenge & 401 Unauthorized if auth header is missing
     if (!authorizationHeader) {
       response.setHeader("WWW-Authenticate", "Basic");
@@ -426,7 +398,6 @@ const handleRequest = async (request, response) => {
       return responseUtils.contentTypeNotAcceptable(response);
     }
 
-    // check if the auth header is properly encoded
     const credentials = authorizationHeader.split(" ")[1];
     const base64regex =
       /^([0-9a-zA-Z+/]{4})*(([0-9a-zA-Z+/]{2}==)|([0-9a-zA-Z+/]{3}=))?$/;
@@ -438,9 +409,7 @@ const handleRequest = async (request, response) => {
   }
 
   if (filePath === "/api/products" && method.toUpperCase() === "POST") {
-    const { headers } = request;
     const authorizationHeader = headers["authorization"];
-    const currentUser = await getCurrentUser(request);
     // response with basic auth challenge & 401 Unauthorized if auth header is missing
     if (!authorizationHeader) {
       response.setHeader("WWW-Authenticate", "Basic");
@@ -494,21 +463,18 @@ const handleRequest = async (request, response) => {
       // response with basic auth challenge if auth header is not properly encoded
       return responseUtils.basicAuthChallenge(response);
     }
-
-    getCurrentUser(request).then((currentUser) => {
-      if (currentUser === null) {
-        // response with basic auth challenge if credentials are incorrect (no user found)
-        return responseUtils.basicAuthChallenge(response);
-      }
-      // response with basic auth challenge if customer credentials are parsed
-      if (currentUser.role === "customer") {
-        return responseUtils.forbidden(response);
-      }
-      if (currentUser.role === "admin") {
-        // respond with json when admin credentials are received
-        return responseUtils.sendJson(response, users);
-      }
-    });
+    if (currentUser === null) {
+      // response with basic auth challenge if credentials are incorrect (no user found)
+      return responseUtils.basicAuthChallenge(response);
+    }
+    // response with basic auth challenge if customer credentials are parsed
+    if (currentUser.role === "customer") {
+      return responseUtils.forbidden(response);
+    }
+    if (currentUser.role === "admin") {
+      // respond with json when admin credentials are received
+      return responseUtils.sendJson(response, users);
+    }
   }
 
   // register new user
@@ -548,14 +514,8 @@ const handleRequest = async (request, response) => {
   }
 
   if (filePath === "/api/orders" && method.toUpperCase() === "POST") {
-    const { headers } = request;
     const authorizationHeader = headers["authorization"];
-    const currentUser = await getCurrentUser(request);
     // response with basic auth challenge & 401 Unauthorized if auth header is missing
-    // if (!authorizationHeader) {
-    //   response.setHeader("WWW-Authenticate", "Basic");
-    //   return responseUtils.unauthorized(response);
-    // }
     if (authorizationHeader === undefined || authorizationHeader === " ") {
       // response with basic auth challenge if auth header is missing/empty
       return responseUtils.basicAuthChallenge(response);
@@ -581,34 +541,26 @@ const handleRequest = async (request, response) => {
 
     const requestBody = await parseBodyJson(request);
     if (requestBody["items"].length === 0) {
-      console.log("Items is empty!");
       return responseUtils.badRequest(response, "Bad Request");
     }
     const { items: orderItems } = requestBody;
     const { product, quantity: productQuantity } = orderItems[0];
     if (productQuantity === undefined) {
-      console.log("Missing quantity!");
       return responseUtils.badRequest(response, "Bad Request");
     }
     if (product === undefined) {
-      console.log("Missing product!");
       return responseUtils.badRequest(response, "Bad Request");
     }
     if (product["_id"] === undefined) {
-      console.log("Missing product ID!");
       return responseUtils.badRequest(response, "Bad Request");
     }
     if (product["name"] === undefined) {
-      console.log("Missing product name!");
       return responseUtils.badRequest(response, "Bad Request");
     }
     if (product["price"] === undefined) {
-      console.log("Missing price!");
       return responseUtils.badRequest(response, "Bad Request");
     }
 
-    console.log(requestBody);
-    console.log(typeof currentUser._id + ": " + currentUser._id);
     const id = mongoose.Types.ObjectId(String(currentUser._id));
     const newOrderData = {
       customerId: currentUser._id,
@@ -624,32 +576,14 @@ const handleRequest = async (request, response) => {
         },
       ],
     };
-    console.log(2);
-    // console.log(newOrderData);
-    // console.log(newOrderData.items[0]);
-    // const newOrder = await new Order(newOrderdata);
-    // await Order.create(newOrderData);
-    console.log(3);
     const newOrder = await Order.find({ customerId: currentUser._id });
-    console.log(4);
-    // await newOrder.save();
-    console.log(newOrder);
-    // console.log(newOrder.)
-    // await newOrder.save();
-    console.log(5);
     return responseUtils.createdResource(response, newOrder[0]);
   }
 
   if (filePath === "/api/orders" && method.toUpperCase() === "GET") {
-    const { headers } = request;
     const authorizationHeader = headers["authorization"];
     const acceptHeader = headers["accept"];
-    const currentUser = await getCurrentUser(request);
     // response with basic auth challenge & 401 Unauthorized if auth header is missing
-    // if (!authorizationHeader) {
-    //   response.setHeader("WWW-Authenticate", "Basic");
-    //   return responseUtils.unauthorized(response);
-    // }
     if (
       acceptHeader === undefined ||
       !acceptHeader.split("/").includes("json")
@@ -669,7 +603,6 @@ const handleRequest = async (request, response) => {
       return responseUtils.sendJson(response, adminOrders);
     }
     const customerOrders = await Order.find({ customerId: currentUser["_id"] });
-    console.log(customerOrders);
     return responseUtils.sendJson(response, customerOrders);
   }
 };

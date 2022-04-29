@@ -75,7 +75,6 @@ const getContentType = (fileExtension) => {
  * @param {string} filePath The filepath having files need to be rendered
  * @param {string} contentType The type of the file (js or css or html,...)
  * @param {http.ServerResponse} response the response to be edited and return
- * @returns {http.ServerResponse} The response with appropriate header and content
  */
 const renderFile = (filePath, contentType, response) => {
   fs.readFile(filePath, (error, content) => {

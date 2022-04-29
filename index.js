@@ -3,7 +3,7 @@ const { handleRequest } = require('./routes');
 const { connectDB, disconnectDB } = require('./models/db');
 
 
-(async () => {
+(() => {
   connectDB();
 })();
 
