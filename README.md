@@ -207,10 +207,10 @@ to install the dependencies defied in the `package.json` files. This should take
 
 ```
 $ npm run reset-db			// Reset MongoDB's database
-$ npm test					// Run Mocha tests + GitLab issues test
-$ npm run eslint			// Test with ESLint to check for coding conventions
+$ npm test							// Run Mocha tests + GitLab issues test
+$ npm run eslint				// Test with ESLint to check for coding conventions
 $ npm run jsdoc-lint		// Test for JSDoc documentations
-$ npm run fp-lint			// Test for functional programming conventions
+$ npm run fp-lint				// Test for functional programming conventions
 ```
 
 Note, that if you cannot run the last command
