@@ -18,15 +18,20 @@ This is the main repository of our group work's project. We created a simple web
   10. 10.6.1 Functional Programming
       </br>
 
-- **Member 2**: An Nguyen, . Work share:
-  1. Do
-  2. Do
+- **Member 2**: An Nguyen, an.nguyen@tuni.fi, 50359099 . Work share:
+  1. 8.6 Method POST and DELETE for user - Backend.
+  2. 8.7 First use of Eslint and fix errors show on it.
+  3. 9.4 Connect URL and its secure handling.
+  4. 9.5 User Mongoose Schema.
+  5. 9.6 Refractor application to use Mongoose Schema.
+  6. 11.2.2 Comment and fix all problems/errors shown by JSDOC grader.
+  7. 11.2.3 Register and deploy the app front end on Heroku, database on MongoDB Atlas.
 - **Member 3**: Khoa Nguyen, khoa.h.nguyen@tuni.fi, 50359141. Work share: I handle most of the frontend behavior of the server (adding product, deleting users, updating shopping cart, placing orders, etc.). In the 11th round, I fixed most of the Mocha tests.
   1. 8.4.1 User Registration - Frontend. Updating new user registration and update the registration form.
   2. 8.5 User Authentication - Handling the Authentication header from the requests. Server send back correct Basic Authorization Challenge when the Authentication header is incorrect.
   3. 9.2 Session storage - Front to backend communication between client and server. Updating the GUI based on user's action. Saving user's Cart into the SessionStorage.
   4. 11.2.1 Mocha grader - Fixing most of Mocha's tests. Including Auth tests, Controller tests, Routes tests, and UI tests.
-  5. Provide
+  5. 11.2.4 Check and remove unnecessary comments and code, following Eslint convention.
 
 </br>
 
